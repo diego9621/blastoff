@@ -1,0 +1,1348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BLASTOFF! — Space Rocket Adventure</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@600;700;800&display=swap');
+
+:root {
+  --panel-bg: #fff8ee;
+  --panel-border: #f0c060;
+  --text-dark: #3a2a10;
+  --text-mid: #7a5c30;
+  --card-bg: #fffdf5;
+  --card-border: #e8d4a0;
+  --btn-orange: #ff7b2e;
+  --btn-orange-shadow: #c04000;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family: 'Nunito', sans-serif;
+  background: #87CEEB;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  user-select: none;
+}
+
+#app-wrapper {
+  width: 50vw;
+  min-width: 800px;
+  max-width: 1200px;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: #fff8ee;
+  box-shadow: 0 0 40px rgba(0,0,0,0.3);
+}
+
+#topbar {
+  background: var(--panel-bg);
+  border-bottom: 3px solid var(--panel-border);
+  padding: 5px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  box-shadow: 0 3px 0 #e0b840;
+  z-index: 10;
+  gap: 10px;
+}
+#topbar h1 {
+  font-family: 'Fredoka One', cursive;
+  font-size: 1.55rem;
+  color: #ff7b2e;
+  text-shadow: 2px 2px 0 #c04000;
+  line-height: 1;
+  white-space: nowrap;
+}
+.stats-row { display:flex; gap:7px; align-items:center; flex-wrap:wrap; }
+.stat-pill {
+  background:#fff3d0; border:2.5px solid var(--panel-border);
+  border-radius:999px; padding:3px 11px;
+  display:flex; align-items:center; gap:5px;
+  box-shadow:0 2px 0 #e0b840;
+}
+.stat-pill .icon { font-size:.9rem; }
+.stat-pill .val { font-family:'Fredoka One',cursive; font-size:.88rem; color:var(--text-dark); }
+.alt-pill  { background:#dff6ff; border-color:#80ccee; }
+.spd-pill  { background:#fff3d0; }
+.cr-pill   { background:#e8f0ff; border-color:#90b0ee; }
+.rec-pill  { background:#e8ffd8; border-color:#80cc80; }
+
+#settings-btn {
+  background: #5a7eff; border:2.5px solid #2a4acc; border-radius:10px;
+  color:#fff; font-family:'Fredoka One',cursive; font-size:.8rem;
+  padding:5px 12px; cursor:pointer; box-shadow:0 3px 0 #2a4acc;
+  transition:transform .1s, box-shadow .1s; white-space:nowrap;
+}
+#settings-btn:hover { transform:translateY(-1px); box-shadow:0 4px 0 #2a4acc; }
+#settings-btn:active { transform:translateY(2px); box-shadow:0 1px 0 #2a4acc; }
+
+#main { display:flex; flex:1; overflow:hidden; }
+#game-wrap { flex:1; position:relative; overflow:hidden; }
+canvas { display:block; width:100%; height:100%; }
+
+#toast {
+  position: absolute;
+  left: 50%;
+  top: 50px;
+  transform: translate3d(-50%, 0, 0);
+  background: #fff176;
+  border: 3px solid #e0b000;
+  border-radius: 999px;
+  padding: 7px 24px;
+  font-family: 'Fredoka One', cursive;
+  font-size: 1rem;
+  color: #7a4a00;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity .25s ease;
+  white-space: nowrap;
+  box-shadow: 0 4px 0 #c09000;
+  will-change: opacity, transform;
+  backface-visibility: hidden;
+}
+
+#toast.show {
+  opacity: 1;
+}
+
+#activity-log {
+  position: absolute;
+  left: 12px;
+  top: 12px;
+  background: rgba(255,248,238,0.95);
+  border: 2.5px solid #f0c060;
+  border-radius: 12px;
+  padding: 8px 10px;
+  max-width: 280px;
+  max-height: 180px;
+  overflow-y: auto;
+  box-shadow: 0 3px 8px rgba(0,0,0,0.15);
+  pointer-events: none;
+  font-size: 0.7rem;
+  z-index: 5;
+}
+#activity-log::-webkit-scrollbar { width: 4px; }
+#activity-log::-webkit-scrollbar-track { background: #f5e8c0; border-radius: 2px; }
+#activity-log::-webkit-scrollbar-thumb { background: #d4b870; border-radius: 2px; }
+.log-header {
+  font-family: 'Fredoka One', cursive;
+  font-size: 0.75rem;
+  color: #c05a00;
+  margin-bottom: 5px;
+  border-bottom: 2px solid #f0d080;
+  padding-bottom: 3px;
+}
+.activity-item {
+  font-size: 0.64rem;
+  color: #7a5c30;
+  margin-bottom: 3px;
+  animation: slideIn 0.25s ease;
+}
+.activity-item.important {
+  color: #c07000;
+  font-weight: 700;
+}
+@keyframes slideIn {
+  from { opacity: 0; transform: translateX(-8px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+#panel {
+  width:278px; flex-shrink:0;
+  background:var(--panel-bg);
+  border-left:3px solid var(--panel-border);
+  display:flex; flex-direction:column;
+  padding:8px 8px; gap:0;
+  overflow:hidden;
+  box-shadow:-3px 0 0 #e0b840;
+}
+
+#tab-bar {
+  display:flex; gap:4px; margin-bottom:8px; flex-shrink:0;
+}
+.tab-btn {
+  flex:1; background:#f0e0c0; border:2px solid #d4b870;
+  border-radius:10px 10px 0 0; padding:5px 2px;
+  font-family:'Fredoka One',cursive; font-size:.68rem;
+  color:#8a6030; cursor:pointer;
+  transition:background .15s, color .15s;
+  text-align:center; line-height:1.2;
+}
+.tab-btn:hover { background:#ffe8c0; }
+.tab-btn.active {
+  background:var(--panel-bg); border-bottom:2px solid var(--panel-bg);
+  color:#c05a00; margin-bottom:-2px; z-index:1;
+}
+
+#tab-content {
+  flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:6px;
+  padding-right:2px;
+}
+#tab-content::-webkit-scrollbar { width:5px; }
+#tab-content::-webkit-scrollbar-track { background:#f5e8c0; border-radius:3px; }
+#tab-content::-webkit-scrollbar-thumb { background:#d4b870; border-radius:3px; }
+
+.section-title {
+  font-family:'Fredoka One',cursive; font-size:.88rem; color:#c05a00;
+  display:flex; align-items:center; gap:5px;
+  border-bottom:2px dashed #f0d080; padding-bottom:3px;
+  flex-shrink:0;
+}
+
+.upg-card {
+  background:var(--card-bg); border:2.5px solid var(--card-border);
+  border-radius:12px; padding:7px 9px; cursor:pointer;
+  box-shadow:0 3px 0 #d4b870;
+  transition:transform .1s,box-shadow .1s,border-color .1s;
+  flex-shrink:0;
+}
+.upg-card:hover:not(.locked):not(.owned) { transform:translateY(-2px); box-shadow:0 5px 0 #d4b870; border-color:#ff9540; }
+.upg-card:active:not(.locked):not(.owned) { transform:translateY(1px); box-shadow:0 1px 0 #d4b870; }
+.upg-card.locked { opacity:.4; cursor:not-allowed; }
+.upg-card.owned  { background:#efffee; border-color:#80e0a0; box-shadow:0 3px 0 #60c080; cursor:default; }
+.upg-card.maxed  { background:#f0f8ff; border-color:#80b0ee; box-shadow:0 3px 0 #5080c0; cursor:default; }
+.upg-header { display:flex; align-items:center; gap:6px; margin-bottom:2px; }
+.upg-icon { 
+  font-size:1.05rem; 
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.upg-name { font-family:'Fredoka One',cursive; font-size:.8rem; color:#b04000; flex:1; }
+.upg-card.owned .upg-name, .upg-card.maxed .upg-name { color:#2060a0; }
+.upg-badge {
+  font-size:.56rem; font-weight:800; border-radius:999px;
+  padding:1px 7px; background:#ff7b2e; color:#fff;
+}
+.upg-card.owned .upg-badge { background:#52d483; }
+.upg-card.maxed .upg-badge { background:#5090e0; }
+.upg-card.locked .upg-badge { background:#aaa; }
+.upg-desc { font-size:.63rem; color:var(--text-mid); line-height:1.35; }
+.upg-cost {
+  margin-top:4px; font-family:'Fredoka One',cursive; font-size:.76rem;
+  display:flex; align-items:center; gap:4px;
+}
+.upg-cost.can { color:#2050d0; }
+.upg-cost.cannot { color:#cc3030; }
+
+#launch-btn {
+  margin-top:8px; flex-shrink:0;
+  background:var(--btn-orange); border:3px solid var(--btn-orange-shadow);
+  border-radius:14px; color:#fff;
+  font-family:'Fredoka One',cursive; font-size:1.05rem;
+  padding:9px; cursor:pointer;
+  box-shadow:0 5px 0 var(--btn-orange-shadow);
+  transition:transform .1s,box-shadow .1s;
+}
+#launch-btn:hover:not(:disabled) { transform:translateY(-2px); box-shadow:0 7px 0 var(--btn-orange-shadow); }
+#launch-btn:active:not(:disabled) { transform:translateY(3px); box-shadow:0 2px 0 var(--btn-orange-shadow); }
+#launch-btn:disabled { background:#ccc; border-color:#aaa; box-shadow:0 3px 0 #aaa; cursor:not-allowed; color:#eee; }
+
+#modal-overlay {
+  display:none; position:fixed; inset:0;
+  background:rgba(0,0,0,.5); z-index:1000;
+  align-items:center; justify-content:center;
+}
+#modal-overlay.open { display:flex; }
+#modal {
+  background:var(--panel-bg); border:3px solid var(--panel-border);
+  border-radius:20px; padding:22px 22px;
+  width:420px; max-width:95vw;
+  box-shadow:0 8px 0 #e0b840, 0 16px 40px rgba(0,0,0,.4);
+  display:flex; flex-direction:column; gap:14px;
+}
+#modal h2 {
+  font-family:'Fredoka One',cursive; font-size:1.3rem; color:#c05a00;
+  text-align:center;
+}
+.modal-section { display:flex; flex-direction:column; gap:6px; }
+.modal-label {
+  font-family:'Fredoka One',cursive; font-size:.8rem; color:#8a6030;
+}
+#save-key {
+  width:100%; font-size:.62rem; font-family:monospace;
+  background:#fff; border:2px solid #d4b870; border-radius:8px;
+  padding:7px 9px; color:#4a3010; resize:vertical; min-height:64px; max-height:100px;
+  word-break:break-all;
+}
+#load-key {
+  width:100%; font-size:.62rem; font-family:monospace;
+  background:#fff; border:2px solid #80b8ee; border-radius:8px;
+  padding:7px 9px; color:#1a3060; resize:vertical; min-height:50px;
+}
+.modal-btn-row { display:flex; gap:8px; }
+.modal-btn {
+  flex:1; padding:8px; border-radius:10px; cursor:pointer;
+  font-family:'Fredoka One',cursive; font-size:.85rem;
+  border:2.5px solid; transition:transform .1s,box-shadow .1s;
+  box-shadow:0 4px 0;
+}
+.modal-btn:hover { transform:translateY(-1px); }
+.modal-btn:active { transform:translateY(2px); box-shadow:0 1px 0; }
+.btn-copy { background:#fff176; border-color:#c0a000; color:#7a4a00; box-shadow-color:#c0a000; box-shadow:0 4px 0 #c0a000; }
+.btn-load { background:#5a7eff; border-color:#2a4acc; color:#fff; box-shadow:0 4px 0 #2a4acc; }
+.btn-reset { background:#ff4f6a; border-color:#c02040; color:#fff; box-shadow:0 4px 0 #c02040; }
+.btn-close { background:#eee; border-color:#bbb; color:#555; box-shadow:0 4px 0 #bbb; }
+#modal-msg { font-size:.72rem; color:#2a8040; font-weight:700; text-align:center; min-height:16px; }
+</style>
+</head>
+<body>
+
+<div id="app-wrapper">
+<div id="topbar">
+  <h1>🚀 BLASTOFF!</h1>
+  <div class="stats-row">
+    <div class="stat-pill alt-pill"><span class="icon">📡</span><span class="val" id="ui-alt">0 m</span></div>
+    <div class="stat-pill spd-pill"><span class="icon">💨</span><span class="val" id="ui-speed">0 m/s</span></div>
+    <div class="stat-pill cr-pill"><span class="icon">₢</span><span class="val" id="ui-credits">0</span></div>
+    <div class="stat-pill rec-pill"><span class="icon">🏆</span><span class="val" id="ui-best">0 m</span></div>
+  </div>
+  <button id="settings-btn" onclick="openSettings()">⚙️ Settings</button>
+</div>
+
+<div id="main">
+  <div id="game-wrap">
+    <canvas id="c"></canvas>
+    <div id="toast"></div>
+    <div id="activity-log">
+      <div class="log-header">📋 Activity</div>
+      <div id="log-content"></div>
+    </div>
+  </div>
+
+  <div id="panel">
+    <div id="tab-bar">
+      <button class="tab-btn active" onclick="setTab('rocket')">🚀<br>Rocket</button>
+      <button class="tab-btn" onclick="setTab('resources')">💎<br>Resources</button>
+      <button class="tab-btn" onclick="setTab('systems')">🧲<br>Systems</button>
+      <button class="tab-btn" onclick="setTab('value')">📈<br>Value</button>
+    </div>
+    <div id="tab-content"></div>
+    <button id="launch-btn" onclick="game.launch()">🚀 LAUNCH!</button>
+  </div>
+</div>
+</div>
+
+<div id="modal-overlay" onclick="closeSettingsOutside(event)">
+  <div id="modal">
+    <h2>⚙️ Settings</h2>
+
+    <div class="modal-section">
+      <div class="modal-label">📤 Save Code — copy and keep safe</div>
+      <textarea id="save-key" readonly></textarea>
+      <div class="modal-btn-row">
+        <button class="modal-btn btn-copy" onclick="copySave()">📋 Copy to Clipboard</button>
+      </div>
+    </div>
+
+    <div class="modal-section">
+      <div class="modal-label">📥 Load Save — paste your code here</div>
+      <textarea id="load-key" placeholder="Paste your save code here..."></textarea>
+      <div class="modal-btn-row">
+        <button class="modal-btn btn-load" onclick="loadSave()">📥 Load Save</button>
+        <button class="modal-btn btn-reset" onclick="resetSave()">🗑️ Reset</button>
+      </div>
+    </div>
+
+    <div id="modal-msg"></div>
+    <div class="modal-btn-row">
+      <button class="modal-btn btn-close" onclick="closeSettings()">✕ Close</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById('c');
+const ctx    = canvas.getContext('2d');
+
+const ZONES = [
+  { alt:0,     top:'#5ba8e0', bot:'#a8dcf8', name:'Blue Sky'     },
+  { alt:3000,  top:'#3a80c0', bot:'#6ab0e0', name:'Upper Sky'    },
+  { alt:10000, top:'#1a3a80', bot:'#2a5aaa', name:'Stratosphere' },
+  { alt:30000, top:'#080e30', bot:'#0e1e50', name:'Mesosphere'   },
+  { alt:60000, top:'#020408', bot:'#050a18', name:'Outer Space'  },
+];
+
+const RES = {
+  credit: { icon:'₢', color:'#5080ff', outline:'#2040a0', value:1,  label:'Credit'   },
+  ruby:   { icon:'🔴', color:'#e03030', outline:'#801010', value:5,  label:'Ruby'     },
+  sap:    { icon:'🔵', color:'#2060e0', outline:'#103090', value:8,  label:'Sapphire' },
+  gold:   { icon:'🟡', color:'#e0b000', outline:'#906000', value:15, label:'Gold Ore' },
+  diamond:{ icon:'💎', color:'#a0e8ff', outline:'#4090b0', value:40, label:'Diamond'  },
+};
+
+const UPGRADES = {
+
+  rocket: [
+    { id:'fuel1',  iconType:'fuel', name:'Fuel Tank I',      desc:'Extra fuel. Base speed +25%.',           type:'once', cost:20,  req:[],        apply:s=>{ s.spd*=1.25; } },
+    { id:'fuel2',  iconType:'fuel', name:'Fuel Tank II',     desc:'Larger tanks. Speed +35%.',              type:'once', cost:80,  req:['fuel1'], apply:s=>{ s.spd*=1.35; } },
+    { id:'fuel3',  iconType:'boost', name:'Turbo Fuel',       desc:'Exotic propellant. Speed +50%.',         type:'once', cost:250, req:['fuel2'], apply:s=>{ s.spd*=1.5;  } },
+    { id:'engine1',iconType:'engine', name:'Engine Upgrade',   desc:'Better combustion. Speed +20%.',         type:'once', cost:50,  req:['fuel1'], apply:s=>{ s.spd*=1.2;  } },
+    { id:'engine2',iconType:'engine', name:'Ion Drive',        desc:'Next-gen propulsion. Speed +40%.',       type:'once', cost:180, req:['engine1'],apply:s=>{ s.spd*=1.4; } },
+    { id:'accel',  iconType:'boost', name:'Afterburner',      desc:'Speed scales with altitude (up to ×2).', type:'once', cost:120, req:['engine1'],apply:s=>{ s.altAccel=true; } },
+    { id:'warp',   iconType:'boost', name:'Warp Core',        desc:'Enormous speed boost ×2.5.',             type:'once', cost:500, req:['engine2','fuel3'], apply:s=>{ s.spd*=2.5; s.warpCore=true; } },
+    { id:'width1', iconType:'size', name:'Wide Body',        desc:'Slightly larger rocket hitbox (+15%).',  type:'once', cost:60,  req:[],        apply:s=>{ s.rSize*=1.15; } },
+    { id:'width2', iconType:'size', name:'Heavy Lifter',     desc:'Big rocket! Hitbox +25%.',               type:'once', cost:200, req:['width1'],apply:s=>{ s.rSize*=1.25; } },
+    { id:'boosters',iconType:'boost', name:'Side Boosters',   desc:'Twin rocket pods for extra thrust.',     type:'once', cost:110, req:['fuel2'], apply:s=>{ s.boosters=true; s.spd*=1.15; } },
+    { id:'antenna', iconType:'antenna', name:'Sensor Array',    desc:'Advanced navigation antenna.',           type:'once', cost:95,  req:['fuel1'], apply:s=>{ s.antenna=true; } },
+    { id:'racing',  iconType:'boost', name:'Racing Stripes',   desc:'Aerodynamic paint job. Speed +8%.',      type:'once', cost:70,  req:[],        apply:s=>{ s.racingStripes=true; s.spd*=1.08; } },
+    { id:'glow',    iconType:'boost', name:'Plasma Glow',      desc:'Engine radiates energy.',                type:'once', cost:140, req:['engine2'],apply:s=>{ s.plasmaGlow=true; } },
+    { id:'chrome',  iconType:'shield', name:'Chrome Finish',   desc:'Reflective metallic coating.',           type:'once', cost:85,  req:[],        apply:s=>{ s.chrome=true; } },
+    { id:'nozzle',  iconType:'boost', name:'Triple Nozzle',   desc:'Advanced exhaust system. Speed +12%.',   type:'once', cost:155, req:['accel'], apply:s=>{ s.tripleNozzle=true; s.spd*=1.12; } },
+    { id:'fins',    iconType:'size', name:'Aero Fins',       desc:'Stabilizer wings for control.',          type:'once', cost:65,  req:[],        apply:s=>{ s.aeroFins=true; } },
+    { id:'tint',    icon:'🕶️', name:'Tinted Window',   desc:'Professional cockpit upgrade.',          type:'once', cost:35,  req:[],        apply:s=>{ s.tintedWindow=true; } },
+  ],
+
+  resources: [
+    { id:'ruby_unlock',    icon:'🔴', name:'Ruby Scanner',    desc:'Rubies can now spawn in space! (5₢ each)', type:'once', cost:1, req:[], apply:s=>{ s.ruby=true; s.rubyPct=1; } },
+    { id:'sap_unlock',     icon:'🔵', name:'Sapphire Drill',  desc:'Sapphires spawn! (8₢ each)',              type:'once', cost:100, req:[], apply:s=>{ s.sap=true;  s.sapPct=1;  } },
+    { id:'gold_unlock',    icon:'🟡', name:'Gold Detector',   desc:'Gold Ore spawns! (15₢ each)',             type:'once', cost:280, req:['ruby_unlock','sap_unlock'], apply:s=>{ s.gold=true; s.goldPct=1; } },
+    { id:'diamond_unlock', icon:'💎', name:'Diamond Core',    desc:'Diamonds spawn! (40₢ each)',              type:'once', cost:700, req:['gold_unlock'], apply:s=>{ s.diamond=true; s.diamondPct=1; } },
+    { id:'ruby_pct', icon:'🔴', name:'Ruby Frequency',  desc:'Each level: +1% of pickups become Rubies.',    type:'stack', maxLevel:9, costs:Array(9).fill(50),   req:['ruby_unlock'],    apply:(s,lvl)=>{ s.rubyPct = 1+lvl; } },
+    { id:'sap_pct',  icon:'🔵', name:'Sapphire Freq.',  desc:'Each level: +1% chance for Sapphires.',        type:'stack', maxLevel:9, costs:Array(9).fill(75),   req:['sap_unlock'],     apply:(s,lvl)=>{ s.sapPct  = 1+lvl; } },
+    { id:'gold_pct', icon:'🟡', name:'Gold Frequency',  desc:'Each level: +1% chance for Gold Ore.',         type:'stack', maxLevel:6, costs:Array(6).fill(140),  req:['gold_unlock'],    apply:(s,lvl)=>{ s.goldPct = 1+lvl; } },
+    { id:'dia_pct',  icon:'💎', name:'Diamond Freq.',   desc:'Each level: +1% chance for Diamonds.',         type:'stack', maxLevel:4, costs:Array(4).fill(350),  req:['diamond_unlock'], apply:(s,lvl)=>{ s.diamondPct = 1+lvl; } },
+    { id:'ruby_val', icon:'🔴', name:'Ruby Polish',     desc:'Rubies worth 2× more.',                        type:'once', cost:200, req:['ruby_unlock'],    apply:s=>{ s.rubyVal*=2;    } },
+    { id:'sap_val',  icon:'🔵', name:'Sapphire Cut',    desc:'Sapphires worth 2× more.',                     type:'once', cost:200, req:['sap_unlock'],     apply:s=>{ s.sapVal*=2;     } },
+    { id:'gold_val', icon:'🟡', name:'Gold Refinery',   desc:'Gold worth 2× more.',                          type:'once', cost:400, req:['gold_unlock'],    apply:s=>{ s.goldVal*=2;    } },
+    { id:'dia_val',  icon:'💎', name:'Diamond Market',  desc:'Diamonds worth 2× more.',                      type:'once', cost:800, req:['diamond_unlock'], apply:s=>{ s.diamondVal*=2; } },
+  ],
+
+  systems: [
+    { id:'magnet',    iconType:'magnet', name:'Magnet Core',    desc:'Unlock the magnet! Pulls resources close.',   type:'once', cost:40,  req:[],          apply:s=>{ s.magnet=true; s.magnetR=95; s.magnetForce=720; } },
+    { id:'mag_r1',    iconType:'magnet', name:'Magnet Boost I', desc:'Magnet range +30% and pull +20%.',           type:'once', cost:90,  req:['magnet'],  apply:s=>{ s.magnetR*=1.3; s.magnetForce*=1.2; } },
+    { id:'mag_r2',    iconType:'magnet', name:'Magnet Boost II',desc:'Magnet range +40% and pull +25%.',           type:'once', cost:200, req:['mag_r1'],  apply:s=>{ s.magnetR*=1.4; s.magnetForce*=1.25; } },
+    { id:'mag_r3',    iconType:'magnet', name:'Magnet Boost III',desc:'Magnet range +50% and pull +30%.',          type:'once', cost:450, req:['mag_r2'],  apply:s=>{ s.magnetR*=1.5; s.magnetForce*=1.3; } },
+    { id:'autopilot', iconType:'antenna', name:'Auto-Steer',     desc:'Rocket slowly drifts toward nearest resource.',type:'once',cost:160, req:['magnet'],  apply:s=>{ s.autopilot=true; } },
+    { id:'shield',    iconType:'shield', name:'Heat Shield',    desc:'Survive deep space entry.',                   type:'once', cost:220, req:['fuel2'],   apply:s=>{ s.shield=true; } },
+  ],
+
+  value: [
+    { id:'cv1',  iconType:'value', name:'Credit Boost I',   desc:'All pickups worth +50% credits.',          type:'once', cost:60,  req:[],       apply:s=>{ s.globalVal*=1.5;  } },
+    { id:'cv2',  iconType:'value', name:'Credit Boost II',  desc:'All pickups worth 2× credits.',            type:'once', cost:180, req:['cv1'],  apply:s=>{ s.globalVal*=2;    } },
+    { id:'cv3',  iconType:'value', name:'Credit Boost III', desc:'All pickups worth 3× credits.',            type:'once', cost:500, req:['cv2'],  apply:s=>{ s.globalVal*=3;    } },
+    { id:'combo', iconType:'gem', name:'Combo Collector', desc:'Collecting 5 in a row doubles next value.',type:'once', cost:130, req:['cv1'],  apply:s=>{ s.combo=true;      } },
+    { id:'dense', icon:'🌌', name:'Dense Field',     desc:'20% more resources spawn in flight.',      type:'once', cost:100, req:[],       apply:s=>{ s.denseField=true; } },
+  ],
+};
+
+const game = (() => {
+
+  function defaultSave() {
+    return { credits:0, best:0, ownedOnce:{}, stackLevels:{} };
+  }
+  let sv = defaultSave();
+  try {
+    const raw = localStorage.getItem('blastoff_v4');
+    if (raw) sv = JSON.parse(atob(raw));
+  } catch {}
+
+  let stats = {};
+  function recalc() {
+    stats = {
+      spd: 38, rSize: 1,
+      altAccel: false, shield: false, autopilot: false,
+      magnet: false, magnetR: 0, magnetForce: 0,
+      ruby: false, rubyPct: 0, rubyVal: 5,
+      sap:  false, sapPct:  0, sapVal:  8,
+      gold: false, goldPct: 0, goldVal: 15,
+      diamond: false, diamondPct: 0, diamondVal: 40,
+      globalVal: 1,
+      combo: false, comboCount: 0, denseField: false,
+      boosters: false, antenna: false, racingStripes: false,
+      plasmaGlow: false, chrome: false, tripleNozzle: false,
+      aeroFins: false, tintedWindow: false, warpCore: false,
+    };
+    for (const [id, owned] of Object.entries(sv.ownedOnce)) {
+      if (!owned) continue;
+      const upg = findUpg(id);
+      if (upg && upg.type === 'once') upg.apply(stats);
+    }
+    for (const [id, level] of Object.entries(sv.stackLevels)) {
+      if (level <= 0) continue;
+      const upg = findUpg(id);
+      if (upg && upg.type === 'stack') upg.apply(stats, level);
+    }
+  }
+  function findUpg(id) {
+    for (const cat of Object.values(UPGRADES))
+      for (const u of cat) if (u.id === id) return u;
+    return null;
+  }
+  recalc();
+
+  let flying = false;
+  let alt = 0, spd = 0;
+  let rocketX = 0;
+  let rocketScreenY = 0, groundScreenY = 0;
+  let W = 0, H = 0;
+  const BASE_ROCKET_Y_RATIO = 0.72;
+  let visitedZones = new Set();
+
+  const keys = {};
+  let touchX = null;
+  window.addEventListener('keydown', e => keys[e.key] = true);
+  window.addEventListener('keyup',   e => delete keys[e.key]);
+
+  canvas.addEventListener('mousedown', e => { touchX = e.clientX; });
+  canvas.addEventListener('mousemove', e => { if (e.buttons) touchX = e.clientX; });
+  canvas.addEventListener('mouseup',   () => { touchX = null; });
+  canvas.addEventListener('touchstart', e => { touchX = e.touches[0].clientX; }, {passive:true});
+  canvas.addEventListener('touchmove',  e => { touchX = e.touches[0].clientX; e.preventDefault(); }, {passive:false});
+  canvas.addEventListener('touchend',   () => { touchX = null; });
+
+  let clouds = [], wRes = [], parts = [], stars = [];
+  let nextRA = 0;
+  let zone = 0;
+  let lastT = 0;
+  let comboStreak = 0;
+
+  function init() {
+    resize();
+    window.addEventListener('resize', resize);
+    buildTabUI(currentTab);
+    updateUI();
+    mkStars(); mkClouds();
+    drawFrame();
+    addLog('Ready for launch!', false);
+  }
+
+  function resize() {
+    const wrap = document.getElementById('game-wrap');
+    W = wrap.clientWidth; H = wrap.clientHeight;
+    canvas.width = W; canvas.height = H;
+    groundScreenY = H - 65;
+    rocketScreenY = groundScreenY - 72;
+    if (!flying) rocketX = W * 0.42;
+    mkStars();
+    if (!flying) drawFrame();
+  }
+
+  function mkStars() {
+    stars = Array.from({length:200}, () => ({
+      x: Math.random()*W, y: Math.random()*H,
+      r: Math.random()*1.6+0.3, b: Math.random()*Math.PI*2
+    }));
+  }
+  function mkClouds() {
+    clouds = Array.from({length:16}, () => mkCloud(Math.random()*6000));
+  }
+  function mkCloud(a) {
+    return { alt:a, x:Math.random()*W, w:90+Math.random()*130, h:38+Math.random()*28, spd:0.28+Math.random()*0.38 };
+  }
+
+  function initRes() {
+    wRes = []; nextRA = 80;
+    const count = stats.denseField ? 18 : 14;
+    for (let i = 0; i < count; i++) spawnRes();
+  }
+
+  function pickType() {
+    const total = 100;
+    let rem = total;
+    const dPct = stats.diamond ? stats.diamondPct : 0;
+    const gPct = stats.gold    ? stats.goldPct    : 0;
+    const sPct = stats.sap     ? stats.sapPct     : 0;
+    const rPct = stats.ruby    ? stats.rubyPct    : 0;
+    const r = Math.random() * total;
+    let acc = 0;
+    acc += dPct; if (r < acc) return 'diamond';
+    acc += gPct; if (r < acc) return 'gold';
+    acc += sPct; if (r < acc) return 'sap';
+    acc += rPct; if (r < acc) return 'ruby';
+    return 'credit';
+  }
+
+  function spawnRes() {
+    const type = pickType();
+    wRes.push({
+      alt: nextRA,
+      x: W*0.08 + Math.random()*W*0.84,
+      r: type === 'credit' ? 12 : 13,
+      type,
+      spin: Math.random()*Math.PI*2,
+      collected: false,
+    });
+    const gap = stats.denseField ? (45+Math.random()*90) : (60+Math.random()*120);
+    nextRA += gap;
+  }
+
+  function launch() {
+    if (flying) return;
+    flying = true; alt = 0; spd = 0; parts = [];
+    comboStreak = 0;
+    rocketX = W * 0.42;
+    initRes(); zone = 0;
+    visitedZones.clear();
+    visitedZones.add(0);
+    document.getElementById('launch-btn').disabled = true;
+    addLog('🚀 Launching!', true);
+    lastT = performance.now();
+    requestAnimationFrame(loop);
+  }
+
+  function loop(ts) {
+    const dt = Math.min((ts - lastT) / 1000, 0.05);
+    lastT = ts;
+    update(dt); drawFrame();
+    if (flying) requestAnimationFrame(loop);
+  }
+
+  const H_SPD = 180;
+  function getResScreenY(r) {
+    return rocketScreenY - (r.alt - alt);
+  }
+
+  function update(dt) {
+    let hv = 0;
+    if (keys['ArrowLeft']  || keys['a'] || keys['A']) hv -= 1;
+    if (keys['ArrowRight'] || keys['d'] || keys['D']) hv += 1;
+
+    if (touchX !== null) {
+      const dx = touchX - rocketX;
+      hv = Math.sign(dx) * Math.min(Math.abs(dx) / 60, 1);
+    }
+
+    rocketX = Math.max(28, Math.min(W - 28, rocketX + hv * H_SPD * dt));
+
+    let accel = 1;
+    if (stats.altAccel) accel = 1 + Math.min(alt / 5000, 1.5);
+    spd = stats.spd * accel;
+    alt += spd * dt;
+    if (alt > sv.best) { sv.best = alt; persist(); }
+
+    if (stats.autopilot) {
+      let nearest = null, nearDist = 9999;
+      for (const r of wRes) {
+        if (r.collected) continue;
+        const cy = getResScreenY(r);
+        if (cy < -100 || cy > H + 50) continue;
+        const dx = r.x - rocketX;
+        const d  = Math.sqrt(dx*dx);
+        if (d < nearDist) { nearDist = d; nearest = r; }
+      }
+      if (nearest) {
+        const pull = Math.sign(nearest.x - rocketX) * 0.4;
+        rocketX = Math.max(28, Math.min(W - 28, rocketX + pull * H_SPD * dt));
+      }
+    }
+
+    while (nextRA < alt + H * 2) spawnRes();
+
+    if (stats.magnet) {
+      for (const r of wRes) {
+        if (r.collected) continue;
+        const cy = getResScreenY(r);
+        const dx = rocketX - r.x;
+        const dy = rocketScreenY - cy;
+        const dist = Math.hypot(dx, dy);
+        if (dist < stats.magnetR && dist > 0.001) {
+          const strength = 1 - dist / stats.magnetR;
+          const force = stats.magnetForce * strength * dt;
+          r.x += (dx / dist) * force;
+          const newCy = cy + (dy / dist) * force;
+          r.alt = alt - (newCy - rocketScreenY);
+        }
+      }
+    }
+
+    const pickR = 14 * stats.rSize;
+    wRes = wRes.filter(r => {
+      if (r.collected) return false;
+      const cy = getResScreenY(r);
+      const dx = rocketX - r.x;
+      const dy = rocketScreenY - cy;
+      if (Math.hypot(dx, dy) < pickR + r.r) {
+        const base = (() => {
+          if (r.type === 'diamond') return stats.diamondVal;
+          if (r.type === 'gold')    return stats.goldVal;
+          if (r.type === 'sap')     return stats.sapVal;
+          if (r.type === 'ruby')    return stats.rubyVal;
+          return 1;
+        })();
+        let val = Math.round(base * stats.globalVal);
+
+        if (stats.combo) {
+          comboStreak++;
+          if (comboStreak % 5 === 0) { val *= 2; showToast('🌟 Combo! ×2!'); }
+        }
+
+        sv.credits += val;
+        burst(r.x, cy, r.type);
+        buildTabUI(currentTab);
+        updateUI();
+        return false;
+      }
+      return true;
+    });
+
+    for (const r of wRes) r.spin += dt * 2;
+
+    for (let i = ZONES.length - 1; i >= 0; i--) {
+      if (alt >= ZONES[i].alt && i !== zone) {
+        zone = i;
+        if (!visitedZones.has(i)) {
+          visitedZones.add(i);
+          showToast('🌌 ' + ZONES[i].name + '!');
+          addLog('Entered: ' + ZONES[i].name, true);
+        }
+        break;
+      }
+    }
+
+    clouds.forEach(c => { c.x = (c.x + c.spd * dt * 18) % (W + 200) - 100; });
+
+    exhaust(rocketX, rocketScreenY + 40);
+
+    parts.forEach(p => { p.x += p.vx*dt; p.y += p.vy*dt; p.life -= dt; });
+    parts = parts.filter(p => p.life > 0);
+
+    milestones();
+    updateUI();
+  }
+
+  const MS = [200, 1000, 5000, 20000, 80000, 300000];
+  const passedMS = new Set();
+  function milestones() {
+    MS.forEach(m => {
+      if (alt >= m && !passedMS.has(m)) {
+        passedMS.add(m);
+        showToast('🏆 ' + fmt(m) + ' reached!');
+        addLog('Milestone: ' + fmt(m), true);
+      }
+    });
+  }
+
+  function exhaust(x, y) {
+    for (let i = 0; i < 4; i++) {
+      parts.push({
+        x, y: y + Math.random()*5,
+        vx: (Math.random()-.5)*24,
+        vy: 60 + Math.random()*65,
+        life: .26 + Math.random()*.22, maxLife:.48,
+        type:'ex', hue: 10+Math.random()*38
+      });
+    }
+  }
+  function burst(x, y, type) {
+    const col = RES[type] ? RES[type].color : '#ffd700';
+    for (let i = 0; i < 16; i++) {
+      const a = Math.random()*Math.PI*2, s = 55+Math.random()*95;
+      parts.push({ x, y, vx:Math.cos(a)*s, vy:Math.sin(a)*s, life:.5, maxLife:.5, type:'gem', col });
+    }
+  }
+
+  function drawFrame() {
+    ctx.clearRect(0,0,W,H);
+    drawSky();
+    drawStars();
+    drawClouds();
+    drawGround();
+    drawRes();
+    drawMagnetRing();
+    drawParts();
+    drawRocket(rocketX, rocketScreenY);
+  }
+
+  function skyColor() {
+    let zi=0;
+    for (let i=ZONES.length-1; i>=0; i--) { if (alt>=ZONES[i].alt) { zi=i; break; } }
+    const zi2 = Math.min(zi+1, ZONES.length-1);
+    const s=ZONES[zi].alt, e=ZONES[zi2].alt||s+1;
+    const t = zi===zi2 ? 1 : Math.min((alt-s)/(e-s), 1);
+    return { top:lerpC(ZONES[zi].top, ZONES[zi2].top, t), bot:lerpC(ZONES[zi].bot, ZONES[zi2].bot, t) };
+  }
+
+  function drawSky() {
+    const {top,bot} = skyColor();
+    const g = ctx.createLinearGradient(0,0,0,H);
+    g.addColorStop(0,top); g.addColorStop(1,bot);
+    ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+  }
+
+  function drawStars() {
+    const vis = Math.min((alt-18000)/12000, 1);
+    if (vis<=0) return;
+    const t = performance.now()/1000;
+    stars.forEach(s => {
+      const a = vis*(0.4+0.6*Math.abs(Math.sin(s.b+t*.7)));
+      ctx.beginPath(); ctx.arc(s.x,s.y,s.r,0,Math.PI*2);
+      ctx.fillStyle=`rgba(255,255,255,${a})`; ctx.fill();
+    });
+  }
+
+  function drawClouds() {
+    const ca = Math.max(0,1-alt/14000);
+    if (ca<=0) return;
+    ctx.globalAlpha = ca;
+    clouds.forEach(c => {
+      const cy = rocketScreenY-(c.alt-alt)-30;
+      if (cy<-100||cy>H+80) return;
+      drawCloud(c.x, cy, c.w, c.h);
+    });
+    ctx.globalAlpha = 1;
+  }
+  function drawCloud(x,y,w,h) {
+    const r=h/2;
+    ctx.fillStyle='rgba(255,255,255,0.93)';
+    ctx.beginPath(); ctx.ellipse(x,y,w/2,r*.65,0,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(x-w*.22,y-r*.22,w*.27,r*.72,0,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(x+w*.2,y-r*.1,w*.23,r*.6,0,0,Math.PI*2); ctx.fill();
+  }
+
+  function drawGround() {
+    const gy2 = rocketScreenY + alt;
+    if (gy2 > H+60) return;
+    ctx.fillStyle='#6dbf5a';
+    ctx.beginPath(); ctx.roundRect(0,gy2,W,H-gy2+30,[16,16,0,0]); ctx.fill();
+    ctx.strokeStyle='#4a9040'; ctx.lineWidth=3;
+    ctx.beginPath(); ctx.moveTo(0,gy2); ctx.lineTo(W,gy2); ctx.stroke();
+    ctx.fillStyle='#7dd460';
+    for (let i=0; i<W; i+=26) {
+      const th=7+(i%3)*4;
+      ctx.beginPath(); ctx.ellipse(i+13,gy2,13,th,0,Math.PI,Math.PI*2); ctx.fill();
+    }
+    const px=W*0.42, pw=90, ph=16;
+    ctx.fillStyle='#c8a060'; ctx.strokeStyle='#8a6020'; ctx.lineWidth=2.5;
+    ctx.beginPath(); ctx.roundRect(px-pw/2,gy2-ph+4,pw,ph,6); ctx.fill(); ctx.stroke();
+    ctx.strokeStyle='#ff6020'; ctx.lineWidth=3;
+    for (let i=-2;i<=2;i++) {
+      ctx.beginPath(); ctx.moveTo(px+i*14,gy2-ph+6); ctx.lineTo(px+i*14,gy2+2); ctx.stroke();
+    }
+    [px-120,px+130,px-200,px+210].forEach(tx=>{
+      if (tx<20||tx>W-20) return;
+      ctx.fillStyle='#7a4a20'; ctx.strokeStyle='#5a3010'; ctx.lineWidth=2;
+      ctx.fillRect(tx-4,gy2-28,8,28); ctx.strokeRect(tx-4,gy2-28,8,28);
+      ctx.fillStyle='#3ab850'; ctx.strokeStyle='#2a8030'; ctx.lineWidth=2;
+      ctx.beginPath(); ctx.ellipse(tx,gy2-42,18,24,0,0,Math.PI*2); ctx.fill(); ctx.stroke();
+    });
+  }
+
+  function drawRes() {
+    wRes.forEach(r => {
+      const cy = getResScreenY(r);
+      if (cy<-30||cy>H+30) return;
+      const bob = Math.sin(performance.now()/400+r.alt)*4;
+      const y = cy+bob;
+      const rd = RES[r.type];
+      if (!rd) return;
+
+      ctx.fillStyle='rgba(0,0,0,0.12)';
+      ctx.beginPath(); ctx.ellipse(r.x,y+r.r+4,r.r*.85,4,0,0,Math.PI*2); ctx.fill();
+
+      ctx.beginPath(); ctx.arc(r.x,y,r.r+8,0,Math.PI*2);
+      const gl=ctx.createRadialGradient(r.x,y,0,r.x,y,r.r+8);
+      gl.addColorStop(0,rd.color+'55'); gl.addColorStop(1,'transparent');
+      ctx.fillStyle=gl; ctx.fill();
+
+      ctx.beginPath(); ctx.arc(r.x,y,r.r,0,Math.PI*2);
+      ctx.fillStyle=rd.color; ctx.fill();
+      ctx.strokeStyle=rd.outline; ctx.lineWidth=2.5; ctx.stroke();
+
+      ctx.beginPath(); ctx.arc(r.x-r.r*.28,y-r.r*.28,r.r*.35,0,Math.PI*2);
+      ctx.fillStyle='rgba(255,255,255,0.5)'; ctx.fill();
+
+      if (r.type !== 'credit') {
+        ctx.font=`${r.r*1.1}px serif`;
+        ctx.textAlign='center'; ctx.textBaseline='middle';
+        ctx.fillText(rd.icon, r.x, y);
+      } else {
+        ctx.font='bold 11px Nunito'; ctx.fillStyle='#1030a0';
+        ctx.textAlign='center'; ctx.textBaseline='middle';
+        ctx.fillText('₢', r.x, y+.5);
+      }
+    });
+  }
+
+  function drawMagnetRing() {
+    if (!stats.magnet || !flying) return;
+    ctx.beginPath(); ctx.arc(rocketX, rocketScreenY, stats.magnetR, 0, Math.PI*2);
+    ctx.strokeStyle='rgba(80,160,255,0.18)'; ctx.lineWidth=2; ctx.setLineDash([6,6]);
+    ctx.stroke(); ctx.setLineDash([]);
+  }
+
+  function drawParts() {
+    parts.forEach(p => {
+      const a = p.life/p.maxLife;
+      if (p.type==='ex') {
+        ctx.save(); ctx.globalAlpha=a*.8;
+        ctx.beginPath(); ctx.arc(p.x,p.y,7+(1-a)*13,0,Math.PI*2);
+        ctx.fillStyle=`hsl(${p.hue},95%,${55+a*15}%)`; ctx.fill();
+        ctx.restore();
+      } else {
+        ctx.beginPath(); ctx.arc(p.x,p.y,5*a,0,Math.PI*2);
+        ctx.fillStyle=p.col; ctx.globalAlpha=a; ctx.fill(); ctx.globalAlpha=1;
+      }
+    });
+  }
+
+  function drawRocket(x,y) {
+    ctx.save();
+    ctx.translate(x,y);
+    const t = performance.now()/1000;
+    const scale = stats.rSize;
+    ctx.scale(scale,scale);
+    if (flying) ctx.translate(Math.sin(t*9)*1.1, 0);
+
+    if (flying) {
+      const pulse=.85+.15*Math.sin(t*22);
+      
+      if (stats.warpCore) {
+        const wg=ctx.createRadialGradient(0,0,0,0,0,80);
+        wg.addColorStop(0,'rgba(150,100,255,0.25)'); 
+        wg.addColorStop(.6,'rgba(100,150,255,0.15)'); 
+        wg.addColorStop(1,'rgba(0,200,255,0)');
+        ctx.fillStyle=wg; ctx.beginPath(); ctx.ellipse(0,0,70,90,0,0,Math.PI*2); ctx.fill();
+      }
+      
+      if (stats.plasmaGlow) {
+        const pg=ctx.createRadialGradient(0,0,0,0,0,50);
+        pg.addColorStop(0,'rgba(100,200,255,0.3)'); 
+        pg.addColorStop(.7,'rgba(50,150,255,0.1)'); 
+        pg.addColorStop(1,'rgba(0,100,255,0)');
+        ctx.fillStyle=pg; ctx.beginPath(); ctx.arc(0,0,48,0,Math.PI*2); ctx.fill();
+      }
+
+      const exhaustIntensity = stats.tripleNozzle ? 1.3 : 1;
+      const eg=ctx.createRadialGradient(0,44,0,0,44,46*pulse*exhaustIntensity);
+      eg.addColorStop(0,'rgba(255,140,10,.9)'); 
+      eg.addColorStop(.4,'rgba(255,70,0,.35)'); 
+      eg.addColorStop(1,'rgba(255,40,0,0)');
+      ctx.fillStyle=eg; ctx.beginPath(); 
+      ctx.ellipse(0,46,28*pulse*exhaustIntensity,46*pulse*exhaustIntensity,0,0,Math.PI*2); 
+      ctx.fill();
+
+      if (stats.tripleNozzle) {
+        ctx.fillStyle=eg; 
+        ctx.beginPath(); ctx.ellipse(-8,48,12*pulse,28*pulse,0,0,Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(8,48,12*pulse,28*pulse,0,0,Math.PI*2); ctx.fill();
+      }
+
+      if (stats.boosters) {
+        const beg=ctx.createRadialGradient(0,0,0,0,0,24*pulse);
+        beg.addColorStop(0,'rgba(255,120,10,.85)'); 
+        beg.addColorStop(.5,'rgba(255,60,0,.3)'); 
+        beg.addColorStop(1,'rgba(255,30,0,0)');
+        ctx.fillStyle=beg;
+        ctx.beginPath(); ctx.ellipse(-28,36,14*pulse,26*pulse,0,0,Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(28,36,14*pulse,26*pulse,0,0,Math.PI*2); ctx.fill();
+      }
+    }
+
+    ctx.fillStyle='rgba(0,0,0,0.15)'; ctx.beginPath(); ctx.ellipse(7,5,17,43,.14,0,Math.PI*2); ctx.fill();
+
+    if (stats.boosters) {
+      ctx.strokeStyle='#3a2a10'; ctx.lineWidth=2.2;
+      ctx.fillStyle='#d0d0e0';
+      ctx.beginPath(); ctx.roundRect(-36,10,12,32,6); ctx.fill(); ctx.stroke();
+      ctx.fillStyle='#7070a0';
+      ctx.beginPath(); ctx.roundRect(-36,36,12,8,4); ctx.fill(); ctx.stroke();
+      ctx.fillStyle='#d0d0e0';
+      ctx.beginPath(); ctx.roundRect(24,10,12,32,6); ctx.fill(); ctx.stroke();
+      ctx.fillStyle='#7070a0';
+      ctx.beginPath(); ctx.roundRect(24,36,12,8,4); ctx.fill(); ctx.stroke();
+    }
+
+    const bodyColor = stats.chrome ? '#e8e8f0' : '#f5f0e8';
+    ctx.fillStyle=bodyColor; ctx.strokeStyle='#3a2a10'; ctx.lineWidth=2.8;
+    ctx.beginPath(); 
+    ctx.moveTo(0,-54); 
+    ctx.bezierCurveTo(17,-30,19,-4,19,24); 
+    ctx.lineTo(-19,24); 
+    ctx.bezierCurveTo(-19,-4,-17,-30,0,-54); 
+    ctx.closePath(); 
+    ctx.fill(); ctx.stroke();
+
+    if (stats.chrome) {
+      const cg=ctx.createLinearGradient(-15,-40,15,-40);
+      cg.addColorStop(0,'rgba(255,255,255,0)');
+      cg.addColorStop(.5,'rgba(255,255,255,0.6)');
+      cg.addColorStop(1,'rgba(255,255,255,0)');
+      ctx.fillStyle=cg;
+      ctx.beginPath(); 
+      ctx.moveTo(0,-52); 
+      ctx.bezierCurveTo(14,-32,16,-10,16,20); 
+      ctx.lineTo(-16,20); 
+      ctx.bezierCurveTo(-16,-10,-14,-32,0,-52); 
+      ctx.closePath(); 
+      ctx.fill();
+    }
+
+    if (stats.racingStripes) {
+      ctx.strokeStyle='#ff3030'; ctx.lineWidth=2.5; ctx.lineCap='round';
+      ctx.beginPath(); ctx.moveTo(-9,-48); ctx.lineTo(-11,18); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(9,-48); ctx.lineTo(11,18); ctx.stroke();
+    }
+
+    ctx.fillStyle='#ff7b2e';
+    ctx.beginPath(); 
+    ctx.moveTo(-17,-2); 
+    ctx.bezierCurveTo(-17,-9,-14,-13,0,-13); 
+    ctx.bezierCurveTo(14,-13,17,-9,17,-2); 
+    ctx.lineTo(17,8); 
+    ctx.bezierCurveTo(17,15,14,19,0,19); 
+    ctx.bezierCurveTo(-14,19,-17,15,-17,8); 
+    ctx.closePath(); 
+    ctx.fill();
+    ctx.strokeStyle='#3a2a10'; ctx.lineWidth=1.8; ctx.stroke();
+
+    ctx.fillStyle='#ff4f6a'; ctx.strokeStyle='#3a2a10'; ctx.lineWidth=2.8;
+    ctx.beginPath(); 
+    ctx.moveTo(0,-54); 
+    ctx.bezierCurveTo(11,-42,15,-30,15,-22); 
+    ctx.lineTo(-15,-22); 
+    ctx.bezierCurveTo(-15,-30,-11,-42,0,-54); 
+    ctx.closePath(); 
+    ctx.fill(); ctx.stroke();
+    ctx.fillStyle='#ff8090';
+    ctx.beginPath(); 
+    ctx.moveTo(0,-54); 
+    ctx.bezierCurveTo(5,-46,7,-38,7,-30); 
+    ctx.lineTo(-7,-30); 
+    ctx.bezierCurveTo(-7,-38,-5,-46,0,-54); 
+    ctx.closePath(); 
+    ctx.fill();
+
+    if (stats.antenna) {
+      ctx.strokeStyle='#606080'; ctx.lineWidth=2.5;
+      ctx.beginPath(); ctx.moveTo(0,-54); ctx.lineTo(0,-68); ctx.stroke();
+      ctx.fillStyle='#ff4040';
+      ctx.beginPath(); ctx.arc(0,-70,3.5,0,Math.PI*2); ctx.fill();
+      ctx.strokeStyle='#3a2a10'; ctx.lineWidth=1.5; ctx.stroke();
+    }
+
+    const windowTint = stats.tintedWindow ? '#90c8e8' : '#b8e8ff';
+    ctx.beginPath(); ctx.arc(0,3,13,0,Math.PI*2); 
+    ctx.fillStyle=windowTint; ctx.fill(); 
+    ctx.strokeStyle='#3a2a10'; ctx.lineWidth=3; ctx.stroke();
+    ctx.beginPath(); ctx.arc(0,3,10,0,Math.PI*2); 
+    const windowInner = stats.tintedWindow ? '#b0d8f8' : '#daf3ff';
+    ctx.fillStyle=windowInner; ctx.fill();
+    drawFace(0,3);
+    ctx.beginPath(); ctx.arc(-3.5,-.5,3.8,0,Math.PI*2); 
+    ctx.fillStyle='rgba(255,255,255,0.5)'; ctx.fill();
+
+    ctx.strokeStyle='#3a2a10'; ctx.lineWidth=2.5; ctx.fillStyle='#ff7b2e';
+    ctx.beginPath(); ctx.moveTo(-19,12); ctx.lineTo(-38,34); ctx.lineTo(-28,40); ctx.lineTo(-19,28); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(19,12);  ctx.lineTo(38,34);  ctx.lineTo(28,40);  ctx.lineTo(19,28);  ctx.closePath(); ctx.fill(); ctx.stroke();
+
+    if (stats.aeroFins) {
+      ctx.fillStyle='#5080ff';
+      ctx.beginPath(); ctx.moveTo(-19,-10); ctx.lineTo(-30,0); ctx.lineTo(-24,6); ctx.lineTo(-19,-2); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(19,-10);  ctx.lineTo(30,0);  ctx.lineTo(24,6);  ctx.lineTo(19,-2);  ctx.closePath(); ctx.fill(); ctx.stroke();
+    }
+
+    ctx.fillStyle='#8888a0'; ctx.strokeStyle='#3a2a10'; ctx.lineWidth=2.2;
+    ctx.beginPath(); ctx.moveTo(-11,24); ctx.lineTo(-14,42); ctx.lineTo(14,42); ctx.lineTo(11,24); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle='#aaaacc';
+    ctx.beginPath(); ctx.roundRect(-12,24,24,7,3); ctx.fill(); ctx.stroke();
+
+    if (stats.tripleNozzle) {
+      ctx.fillStyle='#7070a0';
+      ctx.beginPath(); ctx.arc(-8,40,4,0,Math.PI*2); ctx.fill();
+      ctx.strokeStyle='#3a2a10'; ctx.lineWidth=1.5; ctx.stroke();
+      ctx.beginPath(); ctx.arc(8,40,4,0,Math.PI*2); ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.arc(0,42,4,0,Math.PI*2); ctx.fill(); ctx.stroke();
+    }
+
+    ctx.restore();
+  }
+
+  function drawFace(cx,cy) {
+    const t=performance.now()/1000;
+    ctx.fillStyle='#ffe0b0'; ctx.beginPath(); ctx.arc(cx,cy,7.5,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle='#c09060'; ctx.lineWidth=1; ctx.beginPath(); ctx.arc(cx,cy,7.5,0,Math.PI*2); ctx.stroke();
+    ctx.fillStyle='rgba(255,150,130,0.4)';
+    ctx.beginPath(); ctx.ellipse(cx-5.5,cy+1.5,3,2,0,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(cx+5.5,cy+1.5,3,2,0,0,Math.PI*2); ctx.fill();
+    const blink=Math.sin(t*.6)>.93, eyeH=blink?.4:2.3;
+    ctx.fillStyle='#3a2a10';
+    ctx.beginPath(); ctx.ellipse(cx-2.8,cy-.8,1.4,eyeH,0,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(cx+2.8,cy-.8,1.4,eyeH,0,0,Math.PI*2); ctx.fill();
+    if (!blink) {
+      ctx.fillStyle='rgba(255,255,255,0.7)';
+      ctx.beginPath(); ctx.arc(cx-2.2,cy-1.5,.8,0,Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(cx+3.3,cy-1.5,.8,0,Math.PI*2); ctx.fill();
+    }
+    ctx.strokeStyle='#7a4020'; ctx.lineWidth=1.4; ctx.lineCap='round';
+    ctx.beginPath(); ctx.arc(cx,cy+1.5,3.8,flying?.15:.3,Math.PI-(flying?.15:.3)); ctx.stroke();
+  }
+
+  function updateUI() {
+    document.getElementById('ui-alt').textContent     = fmt(alt);
+    document.getElementById('ui-speed').textContent   = Math.round(spd)+' m/s';
+    document.getElementById('ui-credits').textContent = sv.credits;
+    document.getElementById('ui-best').textContent    = fmt(sv.best);
+  }
+  function fmt(a) {
+    if (a>=1e6) return (a/1e6).toFixed(2)+' Mm';
+    if (a>=1000) return (a/1000).toFixed(1)+' km';
+    return Math.round(a)+' m';
+  }
+
+  let currentTab = 'rocket';
+  window.setTab = function(tab) {
+    currentTab = tab;
+    document.querySelectorAll('.tab-btn').forEach((b,i)=>{
+      const tabs=['rocket','resources','systems','value'];
+      b.classList.toggle('active', tabs[i]===tab);
+    });
+    buildTabUI(tab);
+  };
+
+  function buildTabUI(tab) {
+    const content = document.getElementById('tab-content');
+    content.innerHTML = '';
+    const list = UPGRADES[tab] || [];
+    
+    const filtered = list.filter(u => {
+      const isOnce = u.type === 'once';
+      const isStack = u.type === 'stack';
+      const owned = isOnce ? !!sv.ownedOnce[u.id] : false;
+      const lvl = isStack ? (sv.stackLevels[u.id]||0) : 0;
+      
+      if (owned || lvl > 0) return true;
+      
+      if (!u.req || u.req.length === 0) return true;
+      
+      const missingReqs = u.req.filter(r => !sv.ownedOnce[r]).length;
+      
+      return missingReqs <= 1;
+    });
+    
+    filtered.forEach(u => { content.appendChild(makeCard(u)); });
+  }
+
+  function renderIcon(iconType, color = '#ff7b2e') {
+    const svgNS = 'http://www.w3.org/2000/svg';
+    const svg = document.createElementNS(svgNS, 'svg');
+    svg.setAttribute('width', '24');
+    svg.setAttribute('height', '24');
+    svg.setAttribute('viewBox', '0 0 24 24');
+    svg.style.display = 'block';
+    
+    const iconMap = {
+      'fuel': `<circle cx="12" cy="12" r="8" fill="${color}" stroke="#3a2a10" stroke-width="1.5"/>
+               <rect x="10" y="6" width="4" height="12" fill="#fff" opacity="0.5" rx="1"/>`,
+      'engine': `<circle cx="12" cy="12" r="7" fill="none" stroke="${color}" stroke-width="2"/>
+                 <path d="M12 7 L15 12 L12 17 L9 12 Z" fill="${color}" stroke="#3a2a10" stroke-width="1"/>`,
+      'boost': `<path d="M12 4 L16 12 L12 20 L8 12 Z" fill="${color}" stroke="#3a2a10" stroke-width="1.5"/>
+                <circle cx="12" cy="12" r="3" fill="#fff" opacity="0.6"/>`,
+      'size': `<rect x="6" y="8" width="12" height="8" fill="${color}" stroke="#3a2a10" stroke-width="1.5" rx="2"/>
+               <path d="M8 8 L12 4 L16 8" fill="${color}" stroke="#3a2a10" stroke-width="1.5"/>`,
+      'gem': `<path d="M12 4 L16 9 L12 18 L8 9 Z" fill="${color}" stroke="#3a2a10" stroke-width="1.5"/>
+              <path d="M8 9 L12 9 L16 9" stroke="#3a2a10" stroke-width="1" opacity="0.5"/>`,
+      'magnet': `<path d="M8 6 L8 14 C8 16 10 18 12 18 C14 18 16 16 16 14 L16 6" fill="none" stroke="${color}" stroke-width="2.5" stroke-linecap="round"/>
+                 <rect x="7" y="5" width="3" height="4" fill="${color}" rx="1" stroke="#3a2a10"/>
+                 <rect x="14" y="5" width="3" height="4" fill="${color}" rx="1" stroke="#3a2a10"/>`,
+      'value': `<path d="M4 8 L12 4 L20 8 L12 20 Z" fill="${color}" stroke="#3a2a10" stroke-width="1.5"/>
+                <text x="12" y="14" text-anchor="middle" fill="#fff" font-size="10" font-weight="bold">₢</text>`,
+      'antenna': `<line x1="12" y1="18" x2="12" y2="6" stroke="${color}" stroke-width="2" stroke-linecap="round"/>
+                  <circle cx="12" cy="5" r="2" fill="${color}" stroke="#3a2a10"/>
+                  <circle cx="12" cy="19" r="3" fill="${color}" stroke="#3a2a10" stroke-width="1.5"/>`,
+      'shield': `<path d="M12 3 L19 6 L19 12 C19 16 16 19 12 21 C8 19 5 16 5 12 L5 6 Z" fill="none" stroke="${color}" stroke-width="2"/>
+                 <path d="M12 7 L16 9 L16 13 C16 15 14 17 12 18 C10 17 8 15 8 13 L8 9 Z" fill="${color}" opacity="0.5"/>`,
+    };
+    
+    svg.innerHTML = iconMap[iconType] || iconMap['fuel'];
+    return svg;
+  }
+
+  function makeCard(u) {
+    const isOnce   = u.type === 'once';
+    const isStack  = u.type === 'stack';
+    const owned    = isOnce  ? !!sv.ownedOnce[u.id] : false;
+    const lvl      = isStack ? (sv.stackLevels[u.id]||0) : 0;
+    const maxed    = isStack && lvl >= u.maxLevel;
+    const reqOk    = u.req.every(r => sv.ownedOnce[r]);
+    const cost     = isStack ? u.costs[lvl] : u.cost;
+    const canBuy   = sv.credits >= cost;
+
+    const card = document.createElement('div');
+    card.className = 'upg-card'+(owned||maxed?' owned':'')+((!reqOk&&!owned&&!maxed)?' locked':'');
+    if (isStack && !maxed && lvl>0) card.classList.add('');
+    if (isStack && lvl>0) card.classList.remove('locked');
+
+    const badgeText = owned ? 'OWNED' : maxed ? 'MAX' : (!reqOk ? 'LOCKED' : (isStack&&lvl>0?`LVL ${lvl}/${u.maxLevel}`:'BUY'));
+
+    let costHTML = '';
+    if (!owned && !maxed) {
+      costHTML = `<div class="upg-cost ${canBuy&&reqOk?'can':'cannot'}">₢ ${cost}${isStack?` · Lvl ${lvl+1}/${u.maxLevel}`:''}${!reqOk?' · Needs: '+u.req.join(', '):''}</div>`;
+    }
+    if (maxed) costHTML = `<div class="upg-cost can">✅ Fully upgraded!</div>`;
+
+    const iconEl = document.createElement('span');
+    iconEl.className = 'upg-icon';
+    if (u.iconType) {
+      const iconColor = owned || maxed ? '#5080c0' : '#ff7b2e';
+      iconEl.appendChild(renderIcon(u.iconType, iconColor));
+    } else {
+      iconEl.textContent = u.icon || '🔧';
+    }
+
+    const header = document.createElement('div');
+    header.className = 'upg-header';
+    header.innerHTML = `
+      <span class="upg-name">${u.name}</span>
+      <span class="upg-badge">${badgeText}</span>
+    `;
+    header.insertBefore(iconEl, header.firstChild);
+
+    const desc = document.createElement('div');
+    desc.className = 'upg-desc';
+    desc.textContent = u.desc;
+
+    card.appendChild(header);
+    card.appendChild(desc);
+    if (costHTML) {
+      const costEl = document.createElement('div');
+      costEl.innerHTML = costHTML;
+      card.appendChild(costEl.firstChild);
+    }
+
+    if (!owned && !maxed && reqOk) {
+      card.addEventListener('click', () => buy(u));
+    }
+    return card;
+  }
+
+  function buy(u) {
+    const isStack = u.type==='stack';
+    const lvl     = isStack ? (sv.stackLevels[u.id]||0) : 0;
+    const cost    = isStack ? u.costs[lvl] : u.cost;
+    const maxed   = isStack && lvl>=u.maxLevel;
+    const reqOk   = u.req.every(r => sv.ownedOnce[r]);
+    if (!reqOk || maxed) return;
+    if (sv.credits < cost) { addLog('Not enough credits!', false); return; }
+    sv.credits -= cost;
+    if (isStack) sv.stackLevels[u.id] = lvl+1;
+    else sv.ownedOnce[u.id] = true;
+    recalc();
+    buildTabUI(currentTab);
+    updateUI();
+    addLog('Bought: '+u.name, true);
+    persist();
+  }
+
+  const logLines = [];
+  function addLog(msg, hi) {
+    logLines.unshift({ msg, hi, time: Date.now() });
+    if (logLines.length > 12) logLines.pop();
+    updateActivityLog();
+  }
+  
+  function updateActivityLog() {
+    const container = document.getElementById('log-content');
+    if (!container) return;
+    container.innerHTML = '';
+    logLines.forEach(l => {
+      const el = document.createElement('div');
+      el.className = 'activity-item' + (l.hi ? ' important' : '');
+      el.textContent = '› ' + l.msg;
+      container.appendChild(el);
+    });
+  }
+
+  let toastT;
+  function showToast(msg) {
+    const el=document.getElementById('toast');
+    el.textContent=msg; el.classList.add('show');
+    clearTimeout(toastT);
+    toastT=setTimeout(()=>el.classList.remove('show'),2400);
+  }
+
+  function persist() {
+    try { localStorage.setItem('blastoff_v4', btoa(JSON.stringify(sv))); } catch {}
+  }
+
+  function getSaveKey() {
+    return 'BLASTOFF1::' + btoa(JSON.stringify(sv));
+  }
+
+  function loadFromKey(key) {
+    try {
+      const clean = key.trim();
+      if (!clean.startsWith('BLASTOFF1::')) return false;
+      const parsed = JSON.parse(atob(clean.slice(11)));
+      if (typeof parsed.credits !== 'number') return false;
+      sv = parsed;
+      recalc();
+      buildTabUI(currentTab);
+      updateUI();
+      persist();
+      return true;
+    } catch { return false; }
+  }
+
+  function resetAll() {
+    sv = defaultSave();
+    recalc();
+    buildTabUI(currentTab);
+    updateUI();
+    persist();
+    addLog('Game reset.', false);
+    document.getElementById('launch-btn').disabled = false;
+  }
+
+  function lerpC(a,b,t) {
+    const pa=parseInt(a.slice(1),16), pb=parseInt(b.slice(1),16);
+    const ar=(pa>>16)&255,ag=(pa>>8)&255,ab=pa&255;
+    const br=(pb>>16)&255,bg=(pb>>8)&255,bb=pb&255;
+    return `rgb(${Math.round(ar+(br-ar)*t)},${Math.round(ag+(bg-ag)*t)},${Math.round(ab+(bb-ab)*t)})`;
+  }
+
+  return { init, launch, getSaveKey, loadFromKey, resetAll };
+})();
+
+function openSettings() {
+  document.getElementById('save-key').value = game.getSaveKey();
+  document.getElementById('load-key').value = '';
+  document.getElementById('modal-msg').textContent = '';
+  document.getElementById('modal-overlay').classList.add('open');
+}
+function closeSettings() {
+  document.getElementById('modal-overlay').classList.remove('open');
+}
+function closeSettingsOutside(e) {
+  if (e.target === document.getElementById('modal-overlay')) closeSettings();
+}
+function copySave() {
+  const key = document.getElementById('save-key').value;
+  navigator.clipboard.writeText(key).then(()=>{
+    document.getElementById('modal-msg').textContent = '✅ Copied to clipboard!';
+  }).catch(()=>{
+    document.getElementById('modal-msg').textContent = '⚠️ Select the code above and copy manually.';
+  });
+}
+function loadSave() {
+  const key = document.getElementById('load-key').value;
+  const ok = game.loadFromKey(key);
+  document.getElementById('modal-msg').textContent = ok ? '✅ Save loaded!' : '❌ Invalid save code.';
+}
+function resetSave() {
+  const confirmed = confirm('Reset all progress? This cannot be undone!');
+  if (confirmed) {
+    game.resetAll();
+    document.getElementById('save-key').value = game.getSaveKey();
+    document.getElementById('load-key').value = '';
+    document.getElementById('modal-msg').textContent = '🔄 Progress reset.';
+  } else {
+    document.getElementById('modal-msg').textContent = '';
+  }
+}
+
+window.addEventListener('load', () => game.init());
+</script>
+</body>
+</html>

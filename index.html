@@ -1284,7 +1284,6 @@ const game = (() => {
 
     const card = document.createElement('div');
     card.className = 'upg-card'+(owned||maxed?' owned':'')+((!reqOk&&!owned&&!maxed)?' locked':'');
-    if (isStack && !maxed && lvl>0) card.classList.add('');
     if (isStack && lvl>0) card.classList.remove('locked');
 
     const badgeText = owned ? 'OWNED' : maxed ? 'MAX' : (!reqOk ? 'LOCKED' : (isStack&&lvl>0?`LVL ${lvl}/${u.maxLevel}`:'BUY'));

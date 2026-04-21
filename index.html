@@ -484,6 +484,14 @@ const ZONES = [
   { alt:10000, top:'#1a3a80', bot:'#2a5aaa', name:'Stratosphere' },
   { alt:30000, top:'#080e30', bot:'#0e1e50', name:'Mesosphere'   },
   { alt:60000, top:'#020408', bot:'#050a18', name:'Outer Space'  },
+  { alt:150000, top:'#050718', bot:'#091330', name:'Orbital Expanse' },
+  { alt:400000, top:'#070315', bot:'#130a38', name:'Lunar Drift' },
+  { alt:1000000, top:'#03010d', bot:'#1b0f45', name:'Nebula Rim' },
+  { alt:2500000, top:'#020208', bot:'#210a52', name:'Deep Nebula' },
+  { alt:7000000, top:'#010106', bot:'#2a0d5f', name:'Galactic Veil' },
+  { alt:15000000, top:'#000104', bot:'#320d6f', name:'Starforge Reach' },
+  { alt:35000000, top:'#000103', bot:'#3d0a78', name:'Void Frontier' },
+  { alt:80000000, top:'#000001', bot:'#46007e', name:'Helios Rift' },
 ];
 
 const RES = {
@@ -492,60 +500,106 @@ const RES = {
   sap:    { icon:'🔵', color:'#2060e0', outline:'#103090', value:8,  label:'Sapphire' },
   gold:   { icon:'🟡', color:'#e0b000', outline:'#906000', value:15, label:'Gold Ore' },
   diamond:{ icon:'💎', color:'#a0e8ff', outline:'#4090b0', value:40, label:'Diamond'  },
+  platinum:{ icon:'⚪', color:'#dfe7ff', outline:'#7c8cb2', value:90, label:'Platinum' },
+  antimatter:{ icon:'🟣', color:'#cf7bff', outline:'#5f1f98', value:220, label:'Antimatter' },
 };
+
+function rampCosts(base, multiplier, count) {
+  return Array.from({ length: count }, (_, index) => Math.round(base * Math.pow(multiplier, index)));
+}
 
 const UPGRADES = {
 
   rocket: [
-    { id:'fuel1',  iconType:'fuel', name:'Fuel Tank I',      desc:'Extra fuel. Base speed +25%.',           type:'once', cost:20,  req:[],        apply:s=>{ s.spd*=1.25; } },
-    { id:'fuel2',  iconType:'fuel', name:'Fuel Tank II',     desc:'Larger tanks. Speed +35%.',              type:'once', cost:80,  req:['fuel1'], apply:s=>{ s.spd*=1.35; } },
-    { id:'fuel3',  iconType:'boost', name:'Turbo Fuel',       desc:'Exotic propellant. Speed +50%.',         type:'once', cost:250, req:['fuel2'], apply:s=>{ s.spd*=1.5;  } },
-    { id:'engine1',iconType:'engine', name:'Engine Upgrade',   desc:'Better combustion. Speed +20%.',         type:'once', cost:50,  req:['fuel1'], apply:s=>{ s.spd*=1.2;  } },
-    { id:'engine2',iconType:'engine', name:'Ion Drive',        desc:'Next-gen propulsion. Speed +40%.',       type:'once', cost:180, req:['engine1'],apply:s=>{ s.spd*=1.4; } },
-    { id:'accel',  iconType:'boost', name:'Afterburner',      desc:'Speed scales with altitude (up to ×2).', type:'once', cost:120, req:['engine1'],apply:s=>{ s.altAccel=true; } },
-    { id:'warp',   iconType:'boost', name:'Warp Core',        desc:'Enormous speed boost ×2.5.',             type:'once', cost:500, req:['engine2','fuel3'], apply:s=>{ s.spd*=2.5; s.warpCore=true; } },
-    { id:'width1', iconType:'size', name:'Wide Body',        desc:'Slightly larger rocket hitbox (+15%).',  type:'once', cost:60,  req:[],        apply:s=>{ s.rSize*=1.15; } },
-    { id:'width2', iconType:'size', name:'Heavy Lifter',     desc:'Big rocket! Hitbox +25%.',               type:'once', cost:200, req:['width1'],apply:s=>{ s.rSize*=1.25; } },
-    { id:'boosters',iconType:'boost', name:'Side Boosters',   desc:'Twin rocket pods for extra thrust.',     type:'once', cost:110, req:['fuel2'], apply:s=>{ s.boosters=true; s.spd*=1.15; } },
-    { id:'antenna', iconType:'antenna', name:'Sensor Array',    desc:'Advanced navigation antenna.',           type:'once', cost:95,  req:['fuel1'], apply:s=>{ s.antenna=true; } },
-    { id:'racing',  iconType:'boost', name:'Racing Stripes',   desc:'Aerodynamic paint job. Speed +8%.',      type:'once', cost:70,  req:[],        apply:s=>{ s.racingStripes=true; s.spd*=1.08; } },
-    { id:'glow',    iconType:'boost', name:'Plasma Glow',      desc:'Engine radiates energy.',                type:'once', cost:140, req:['engine2'],apply:s=>{ s.plasmaGlow=true; } },
-    { id:'chrome',  iconType:'shield', name:'Chrome Finish',   desc:'Reflective metallic coating.',           type:'once', cost:85,  req:[],        apply:s=>{ s.chrome=true; } },
-    { id:'nozzle',  iconType:'boost', name:'Triple Nozzle',   desc:'Advanced exhaust system. Speed +12%.',   type:'once', cost:155, req:['accel'], apply:s=>{ s.tripleNozzle=true; s.spd*=1.12; } },
-    { id:'fins',    iconType:'size', name:'Aero Fins',       desc:'Stabilizer wings for control.',          type:'once', cost:65,  req:[],        apply:s=>{ s.aeroFins=true; } },
-    { id:'tint',    icon:'🕶️', name:'Tinted Window',   desc:'Professional cockpit upgrade.',          type:'once', cost:35,  req:[],        apply:s=>{ s.tintedWindow=true; } },
+    { id:'fuel1',  iconType:'fuel', name:'Fuel Tank I',      desc:'Extra fuel. Base speed +25%.',           type:'once', cost:60,  req:[],        apply:s=>{ s.spd*=1.25; } },
+    { id:'fuel2',  iconType:'fuel', name:'Fuel Tank II',     desc:'Larger tanks. Speed +35%.',              type:'once', cost:180,  req:['fuel1'], apply:s=>{ s.spd*=1.35; } },
+    { id:'fuel3',  iconType:'boost', name:'Turbo Fuel',       desc:'Exotic propellant. Speed +50%.',         type:'once', cost:520, req:['fuel2'], apply:s=>{ s.spd*=1.5;  } },
+    { id:'engine1',iconType:'engine', name:'Engine Upgrade',   desc:'Better combustion. Speed +20%.',         type:'once', cost:120,  req:['fuel1'], apply:s=>{ s.spd*=1.2;  } },
+    { id:'engine2',iconType:'engine', name:'Ion Drive',        desc:'Next-gen propulsion. Speed +40%.',       type:'once', cost:420, req:['engine1'],apply:s=>{ s.spd*=1.4; } },
+    { id:'accel',  iconType:'boost', name:'Afterburner',      desc:'Speed scales with altitude (up to ×2).', type:'once', cost:360, req:['engine1'],apply:s=>{ s.altAccel=true; } },
+    { id:'warp',   iconType:'boost', name:'Warp Core',        desc:'Enormous speed boost ×2.5.',             type:'once', cost:1400, req:['engine2','fuel3'], apply:s=>{ s.spd*=2.5; s.warpCore=true; } },
+    { id:'width1', iconType:'size', name:'Wide Body',        desc:'Slightly larger rocket hitbox (+15%).',  type:'once', cost:140,  req:[],        apply:s=>{ s.rSize*=1.15; } },
+    { id:'width2', iconType:'size', name:'Heavy Lifter',     desc:'Big rocket! Hitbox +25%.',               type:'once', cost:480, req:['width1'],apply:s=>{ s.rSize*=1.25; } },
+    { id:'boosters',iconType:'boost', name:'Side Boosters',   desc:'Twin rocket pods for extra thrust.',     type:'once', cost:320, req:['fuel2'], apply:s=>{ s.boosters=true; s.spd*=1.15; } },
+    { id:'antenna', iconType:'antenna', name:'Sensor Array',    desc:'Advanced navigation antenna.',           type:'once', cost:240,  req:['fuel1'], apply:s=>{ s.antenna=true; } },
+    { id:'racing',  iconType:'boost', name:'Racing Stripes',   desc:'Aerodynamic paint job. Speed +8%.',      type:'once', cost:160,  req:[],        apply:s=>{ s.racingStripes=true; s.spd*=1.08; } },
+    { id:'glow',    iconType:'boost', name:'Plasma Glow',      desc:'Engine radiates energy.',                type:'once', cost:360, req:['engine2'],apply:s=>{ s.plasmaGlow=true; } },
+    { id:'chrome',  iconType:'shield', name:'Chrome Finish',   desc:'Reflective metallic coating.',           type:'once', cost:220,  req:[],        apply:s=>{ s.chrome=true; } },
+    { id:'nozzle',  iconType:'boost', name:'Triple Nozzle',   desc:'Advanced exhaust system. Speed +12%.',   type:'once', cost:420, req:['accel'], apply:s=>{ s.tripleNozzle=true; s.spd*=1.12; } },
+    { id:'fins',    iconType:'size', name:'Aero Fins',       desc:'Stabilizer wings for control.',          type:'once', cost:180,  req:[],        apply:s=>{ s.aeroFins=true; } },
+    { id:'tint',    icon:'🕶️', name:'Tinted Window',   desc:'Professional cockpit upgrade.',          type:'once', cost:90,  req:[],        apply:s=>{ s.tintedWindow=true; } },
+    { id:'engine3', iconType:'engine', name:'Fusion Drive',      desc:'High-energy fusion engines. Speed +70%.',         type:'once', cost:2200,  req:['engine2','fuel3'], apply:s=>{ s.spd*=1.7; } },
+    { id:'engine4', iconType:'engine', name:'Singularity Drive', desc:'Harness collapsed matter. Speed +120%.',          type:'once', cost:7500, req:['engine3','warp'], apply:s=>{ s.spd*=2.2; } },
+    { id:'fuel4',   iconType:'fuel',   name:'Dark Matter Cells', desc:'Hyper-dense fuel reserves. Speed +80%.',          type:'once', cost:3200,  req:['fuel3'], apply:s=>{ s.spd*=1.8; } },
+    { id:'fuel5',   iconType:'fuel',   name:'Stellar Reservoir', desc:'Colossal fuel storage. Speed +110%.',             type:'once', cost:9800, req:['fuel4','engine3'], apply:s=>{ s.spd*=2.1; } },
+    { id:'nav_hull',iconType:'size',   name:'Streamlined Hull',  desc:'Precision chassis. Speed +18% and tighter handling.', type:'once', cost:1700, req:['fins','engine2'], apply:s=>{ s.spd*=1.18; s.handling*=1.1; } },
+    { id:'starframe',iconType:'size',  name:'Starframe Chassis', desc:'Reinforced deep-space frame. Hitbox +10%, speed +25%.', type:'once', cost:5200, req:['width2','nav_hull'], apply:s=>{ s.rSize*=1.1; s.spd*=1.25; } },
+    { id:'thrusters',iconType:'boost', name:'Vector Thrusters',  desc:'Horizontal movement +20%.',                      type:'once', cost:1500, req:['fins'], apply:s=>{ s.handling*=1.2; } },
+    { id:'thrusters2',iconType:'boost',name:'Quantum Thrusters', desc:'Horizontal movement +35%.',                      type:'once', cost:5400, req:['thrusters','engine3'], apply:s=>{ s.handling*=1.35; } },
+    { id:'nova_shell',iconType:'shield',name:'Nova Shell',      desc:'Exotic hull plating. Speed +30% and shielded structure.', type:'once', cost:12000, req:['shield','starframe'], apply:s=>{ s.spd*=1.3; s.shield=true; } },
+    { id:'overclock',iconType:'boost', name:'Core Overclock',   desc:'Massive output surge. Global speed +45%.',        type:'once', cost:24000, req:['engine4','fuel5'], apply:s=>{ s.spd*=1.45; } },
   ],
 
   resources: [
-    { id:'ruby_unlock',    icon:'🔴', name:'Ruby Scanner',    desc:'Rubies can now spawn in space! (5₢ each)', type:'once', cost:1, req:[], apply:s=>{ s.ruby=true; s.rubyPct=1; } },
-    { id:'sap_unlock',     icon:'🔵', name:'Sapphire Drill',  desc:'Sapphires spawn! (8₢ each)',              type:'once', cost:100, req:[], apply:s=>{ s.sap=true;  s.sapPct=1;  } },
-    { id:'gold_unlock',    icon:'🟡', name:'Gold Detector',   desc:'Gold Ore spawns! (15₢ each)',             type:'once', cost:280, req:['ruby_unlock','sap_unlock'], apply:s=>{ s.gold=true; s.goldPct=1; } },
-    { id:'diamond_unlock', icon:'💎', name:'Diamond Core',    desc:'Diamonds spawn! (40₢ each)',              type:'once', cost:700, req:['gold_unlock'], apply:s=>{ s.diamond=true; s.diamondPct=1; } },
-    { id:'ruby_pct', icon:'🔴', name:'Ruby Frequency',  desc:'Each level: +1% of pickups become Rubies.',    type:'stack', maxLevel:9, costs:Array(9).fill(50),   req:['ruby_unlock'],    apply:(s,lvl)=>{ s.rubyPct = 1+lvl; } },
-    { id:'sap_pct',  icon:'🔵', name:'Sapphire Freq.',  desc:'Each level: +1% chance for Sapphires.',        type:'stack', maxLevel:9, costs:Array(9).fill(75),   req:['sap_unlock'],     apply:(s,lvl)=>{ s.sapPct  = 1+lvl; } },
-    { id:'gold_pct', icon:'🟡', name:'Gold Frequency',  desc:'Each level: +1% chance for Gold Ore.',         type:'stack', maxLevel:6, costs:Array(6).fill(140),  req:['gold_unlock'],    apply:(s,lvl)=>{ s.goldPct = 1+lvl; } },
-    { id:'dia_pct',  icon:'💎', name:'Diamond Freq.',   desc:'Each level: +1% chance for Diamonds.',         type:'stack', maxLevel:4, costs:Array(4).fill(350),  req:['diamond_unlock'], apply:(s,lvl)=>{ s.diamondPct = 1+lvl; } },
-    { id:'ruby_val', icon:'🔴', name:'Ruby Polish',     desc:'Rubies worth 2× more.',                        type:'once', cost:200, req:['ruby_unlock'],    apply:s=>{ s.rubyVal*=2;    } },
-    { id:'sap_val',  icon:'🔵', name:'Sapphire Cut',    desc:'Sapphires worth 2× more.',                     type:'once', cost:200, req:['sap_unlock'],     apply:s=>{ s.sapVal*=2;     } },
-    { id:'gold_val', icon:'🟡', name:'Gold Refinery',   desc:'Gold worth 2× more.',                          type:'once', cost:400, req:['gold_unlock'],    apply:s=>{ s.goldVal*=2;    } },
-    { id:'dia_val',  icon:'💎', name:'Diamond Market',  desc:'Diamonds worth 2× more.',                      type:'once', cost:800, req:['diamond_unlock'], apply:s=>{ s.diamondVal*=2; } },
+    { id:'ruby_unlock',    icon:'🔴', name:'Ruby Scanner',    desc:'Rubies can now spawn in space! (5₢ each)', type:'once', cost:40, req:[], apply:s=>{ s.ruby=true; s.rubyPct=1; } },
+    { id:'sap_unlock',     icon:'🔵', name:'Sapphire Drill',  desc:'Sapphires spawn! (8₢ each)',              type:'once', cost:260, req:[], apply:s=>{ s.sap=true;  s.sapPct=1;  } },
+    { id:'gold_unlock',    icon:'🟡', name:'Gold Detector',   desc:'Gold Ore spawns! (15₢ each)',             type:'once', cost:900, req:['ruby_unlock','sap_unlock'], apply:s=>{ s.gold=true; s.goldPct=1; } },
+    { id:'diamond_unlock', icon:'💎', name:'Diamond Core',    desc:'Diamonds spawn! (40₢ each)',              type:'once', cost:2800, req:['gold_unlock'], apply:s=>{ s.diamond=true; s.diamondPct=1; } },
+    { id:'platinum_unlock', icon:'⚪', name:'Platinum Forge', desc:'Platinum clusters begin to spawn! (90₢ each)', type:'once', cost:12000, req:['diamond_unlock'], apply:s=>{ s.platinum=true; s.platinumPct=1; } },
+    { id:'antimatter_unlock', icon:'🟣', name:'Antimatter Lab', desc:'Unstable antimatter appears! (220₢ each)', type:'once', cost:48000, req:['platinum_unlock'], apply:s=>{ s.antimatter=true; s.antimatterPct=1; } },
+    { id:'ruby_pct', icon:'🔴', name:'Ruby Frequency',  desc:'Each level: +1% of pickups become Rubies.',    type:'stack', maxLevel:9, costs:rampCosts(90, 1.45, 9),   req:['ruby_unlock'],    apply:(s,lvl)=>{ s.rubyPct = 1+lvl; } },
+    { id:'sap_pct',  icon:'🔵', name:'Sapphire Freq.',  desc:'Each level: +1% chance for Sapphires.',        type:'stack', maxLevel:9, costs:rampCosts(140, 1.45, 9),   req:['sap_unlock'],     apply:(s,lvl)=>{ s.sapPct  = 1+lvl; } },
+    { id:'gold_pct', icon:'🟡', name:'Gold Frequency',  desc:'Each level: +1% chance for Gold Ore.',         type:'stack', maxLevel:6, costs:rampCosts(320, 1.55, 6),  req:['gold_unlock'],    apply:(s,lvl)=>{ s.goldPct = 1+lvl; } },
+    { id:'dia_pct',  icon:'💎', name:'Diamond Freq.',   desc:'Each level: +1% chance for Diamonds.',         type:'stack', maxLevel:4, costs:rampCosts(950, 1.7, 4),  req:['diamond_unlock'], apply:(s,lvl)=>{ s.diamondPct = 1+lvl; } },
+    { id:'platinum_pct', icon:'⚪', name:'Platinum Frequency', desc:'Each level: +1% chance for Platinum.',    type:'stack', maxLevel:6, costs:rampCosts(4000, 1.85, 6), req:['platinum_unlock'], apply:(s,lvl)=>{ s.platinumPct = 1+lvl; } },
+    { id:'antimatter_pct', icon:'🟣', name:'Antimatter Frequency', desc:'Each level: +1% chance for Antimatter.', type:'stack', maxLevel:5, costs:rampCosts(15000, 2.0, 5), req:['antimatter_unlock'], apply:(s,lvl)=>{ s.antimatterPct = 1+lvl; } },
+    { id:'ruby_val', icon:'🔴', name:'Ruby Polish',     desc:'Rubies worth 2× more.',                        type:'once', cost:550, req:['ruby_unlock'],    apply:s=>{ s.rubyVal*=2;    } },
+    { id:'sap_val',  icon:'🔵', name:'Sapphire Cut',    desc:'Sapphires worth 2× more.',                     type:'once', cost:700, req:['sap_unlock'],     apply:s=>{ s.sapVal*=2;     } },
+    { id:'gold_val', icon:'🟡', name:'Gold Refinery',   desc:'Gold worth 2× more.',                          type:'once', cost:1600, req:['gold_unlock'],    apply:s=>{ s.goldVal*=2;    } },
+    { id:'dia_val',  icon:'💎', name:'Diamond Market',  desc:'Diamonds worth 2× more.',                      type:'once', cost:5200, req:['diamond_unlock'], apply:s=>{ s.diamondVal*=2; } },
+    { id:'platinum_val', icon:'⚪', name:'Platinum Exchange', desc:'Platinum is worth 2× more.',               type:'once', cost:22000, req:['platinum_unlock'], apply:s=>{ s.platinumVal*=2; } },
+    { id:'antimatter_val', icon:'🟣', name:'Antimatter Reactor', desc:'Antimatter is worth 2× more.',         type:'once', cost:90000, req:['antimatter_unlock'], apply:s=>{ s.antimatterVal*=2; } },
+    { id:'field1', icon:'✨', name:'Resource Bloom I', desc:'20% more pickups spawn per flight.',             type:'once', cost:2400, req:['gold_unlock'], apply:s=>{ s.spawnDensity*=1.2; } },
+    { id:'field2', icon:'🌠', name:'Resource Bloom II', desc:'30% more pickups spawn per flight.',            type:'once', cost:9500, req:['field1','diamond_unlock'], apply:s=>{ s.spawnDensity*=1.3; } },
+    { id:'field3', icon:'🪐', name:'Resource Bloom III', desc:'45% more pickups spawn per flight.',           type:'once', cost:36000, req:['field2','platinum_unlock'], apply:s=>{ s.spawnDensity*=1.45; } },
   ],
 
   systems: [
-    { id:'magnet',    iconType:'magnet', name:'Magnet Core',    desc:'Unlock the magnet! Pulls resources close.',   type:'once', cost:40,  req:[],          apply:s=>{ s.magnet=true; s.magnetR=95; s.magnetForce=720; } },
-    { id:'mag_r1',    iconType:'magnet', name:'Magnet Boost I', desc:'Magnet range +30% and pull +20%.',           type:'once', cost:90,  req:['magnet'],  apply:s=>{ s.magnetR*=1.3; s.magnetForce*=1.2; } },
-    { id:'mag_r2',    iconType:'magnet', name:'Magnet Boost II',desc:'Magnet range +40% and pull +25%.',           type:'once', cost:200, req:['mag_r1'],  apply:s=>{ s.magnetR*=1.4; s.magnetForce*=1.25; } },
-    { id:'mag_r3',    iconType:'magnet', name:'Magnet Boost III',desc:'Magnet range +50% and pull +30%.',          type:'once', cost:450, req:['mag_r2'],  apply:s=>{ s.magnetR*=1.5; s.magnetForce*=1.3; } },
-    { id:'autopilot', iconType:'antenna', name:'Auto-Steer',     desc:'Rocket slowly drifts toward nearest resource.',type:'once',cost:160, req:['magnet'],  apply:s=>{ s.autopilot=true; } },
-    { id:'shield',    iconType:'shield', name:'Heat Shield',    desc:'Survive deep space entry.',                   type:'once', cost:220, req:['fuel2'],   apply:s=>{ s.shield=true; } },
+    { id:'magnet',    iconType:'magnet', name:'Magnet Core',    desc:'Unlock the magnet! Pulls resources close.',   type:'once', cost:180,  req:[],          apply:s=>{ s.magnet=true; s.magnetR=95; s.magnetForce=720; } },
+    { id:'mag_r1',    iconType:'magnet', name:'Magnet Boost I', desc:'Magnet range +30% and pull +20%.',           type:'once', cost:420,  req:['magnet'],  apply:s=>{ s.magnetR*=1.3; s.magnetForce*=1.2; } },
+    { id:'mag_r2',    iconType:'magnet', name:'Magnet Boost II',desc:'Magnet range +40% and pull +25%.',           type:'once', cost:1100, req:['mag_r1'],  apply:s=>{ s.magnetR*=1.4; s.magnetForce*=1.25; } },
+    { id:'mag_r3',    iconType:'magnet', name:'Magnet Boost III',desc:'Magnet range +50% and pull +30%.',          type:'once', cost:3200, req:['mag_r2'],  apply:s=>{ s.magnetR*=1.5; s.magnetForce*=1.3; } },
+    { id:'autopilot', iconType:'antenna', name:'Auto-Steer',     desc:'Rocket slowly drifts toward nearest resource.',type:'once',cost:850, req:['magnet'],  apply:s=>{ s.autopilot=true; } },
+    { id:'shield',    iconType:'shield', name:'Heat Shield',    desc:'Survive deep space entry.',                   type:'once', cost:1200, req:['fuel2'],   apply:s=>{ s.shield=true; } },
+    { id:'navigator1', iconType:'antenna', name:'Navigator I',   desc:'Auto-steer responds 35% faster.',              type:'once', cost:2200, req:['autopilot'], apply:s=>{ s.autopilotStrength*=1.35; } },
+    { id:'navigator2', iconType:'antenna', name:'Navigator II',  desc:'Auto-steer responds 50% faster.',              type:'once', cost:6000, req:['navigator1'], apply:s=>{ s.autopilotStrength*=1.5; } },
+    { id:'navigator3', iconType:'antenna', name:'Navigator III', desc:'Auto-steer responds 65% faster.',              type:'once', cost:16000, req:['navigator2'], apply:s=>{ s.autopilotStrength*=1.65; } },
+    { id:'navigator4', iconType:'antenna', name:'Stellar Navigator', desc:'Auto-steer sees farther and turns harder.', type:'once', cost:42000, req:['navigator3','platinum_unlock'], apply:s=>{ s.autopilotStrength*=1.8; s.autopilotRange*=1.35; } },
+    { id:'navigator5', iconType:'antenna', name:'Event Horizon Nav', desc:'Auto-steer becomes deep-space grade.',     type:'once', cost:120000, req:['navigator4','antimatter_unlock'], apply:s=>{ s.autopilotStrength*=2; s.autopilotRange*=1.5; } },
+    { id:'mag_r4',    iconType:'magnet', name:'Magnet Boost IV', desc:'Magnet range +60% and pull +35%.',            type:'once', cost:9500, req:['mag_r3'], apply:s=>{ s.magnetR*=1.6; s.magnetForce*=1.35; } },
+    { id:'mag_r5',    iconType:'magnet', name:'Magnet Boost V',  desc:'Magnet range +75% and pull +45%.',            type:'once', cost:34000, req:['mag_r4','platinum_unlock'], apply:s=>{ s.magnetR*=1.75; s.magnetForce*=1.45; } },
+    { id:'tractor',   iconType:'magnet', name:'Tractor Beam',    desc:'Massive magnet surge. Range +50%, pull +60%.', type:'once', cost:110000, req:['mag_r5','antimatter_unlock'], apply:s=>{ s.magnetR*=1.5; s.magnetForce*=1.6; } },
+    { id:'shield2',   iconType:'shield', name:'Phase Shield',    desc:'Exotic shielding stabilizes deep-space flight.', type:'once', cost:9000, req:['shield','engine3'], apply:s=>{ s.shield=true; s.spd*=1.15; } },
+    { id:'shield3',   iconType:'shield', name:'Quantum Shield',  desc:'Late-game safety shell with speed +22%.',      type:'once', cost:36000, req:['shield2','engine4'], apply:s=>{ s.shield=true; s.spd*=1.22; } },
+    { id:'density_stack', icon:'📡', name:'Orbital Scanners',    desc:'Each level: +8% more pickup density.',         type:'stack', maxLevel:8, costs:rampCosts(2600, 1.7, 8), req:['autopilot'], apply:(s,lvl)=>{ s.spawnDensity *= 1 + lvl * 0.08; } },
   ],
 
   value: [
-    { id:'cv1',  iconType:'value', name:'Credit Boost I',   desc:'All pickups worth +50% credits.',          type:'once', cost:60,  req:[],       apply:s=>{ s.globalVal*=1.5;  } },
-    { id:'cv2',  iconType:'value', name:'Credit Boost II',  desc:'All pickups worth 2× credits.',            type:'once', cost:180, req:['cv1'],  apply:s=>{ s.globalVal*=2;    } },
-    { id:'cv3',  iconType:'value', name:'Credit Boost III', desc:'All pickups worth 3× credits.',            type:'once', cost:500, req:['cv2'],  apply:s=>{ s.globalVal*=3;    } },
-    { id:'combo', iconType:'gem', name:'Combo Collector', desc:'Collecting 5 in a row doubles next value.',type:'once', cost:130, req:['cv1'],  apply:s=>{ s.combo=true;      } },
-    { id:'dense', icon:'🌌', name:'Dense Field',     desc:'20% more resources spawn in flight.',      type:'once', cost:100, req:[],       apply:s=>{ s.denseField=true; } },
+    { id:'cv1',  iconType:'value', name:'Credit Boost I',   desc:'All pickups worth +50% credits.',          type:'once', cost:180,  req:[],       apply:s=>{ s.globalVal*=1.5;  } },
+    { id:'cv2',  iconType:'value', name:'Credit Boost II',  desc:'All pickups worth 2× credits.',            type:'once', cost:600, req:['cv1'],  apply:s=>{ s.globalVal*=2;    } },
+    { id:'cv3',  iconType:'value', name:'Credit Boost III', desc:'All pickups worth 3× credits.',            type:'once', cost:2200, req:['cv2'],  apply:s=>{ s.globalVal*=3;    } },
+    { id:'combo', iconType:'gem', name:'Combo Collector', desc:'Collecting 5 in a row doubles next value.',type:'once', cost:750, req:['cv1'],  apply:s=>{ s.combo=true;      } },
+    { id:'dense', icon:'🌌', name:'Dense Field',     desc:'20% more resources spawn in flight.',      type:'once', cost:650, req:[],       apply:s=>{ s.denseField=true; } },
+    { id:'cv4',  iconType:'value', name:'Credit Boost IV',  desc:'All pickups worth 4× credits.',            type:'once', cost:9000, req:['cv3'], apply:s=>{ s.globalVal*=4; } },
+    { id:'cv5',  iconType:'value', name:'Credit Boost V',   desc:'All pickups worth 5× credits.',            type:'once', cost:42000, req:['cv4','platinum_unlock'], apply:s=>{ s.globalVal*=5; } },
+    { id:'cv6',  iconType:'value', name:'Credit Boost VI',  desc:'All pickups worth 6× credits.',            type:'once', cost:180000, req:['cv5','antimatter_unlock'], apply:s=>{ s.globalVal*=6; } },
+    { id:'market1', iconType:'value', name:'Market Analytics', desc:'Flat value multiplier +35%.',            type:'once', cost:3000, req:['cv2'], apply:s=>{ s.globalVal*=1.35; } },
+    { id:'market2', iconType:'value', name:'Interstellar Market', desc:'Flat value multiplier +60%.',         type:'once', cost:12000, req:['market1','diamond_unlock'], apply:s=>{ s.globalVal*=1.6; } },
+    { id:'market3', iconType:'value', name:'Galactic Exchange', desc:'Flat value multiplier +90%.',           type:'once', cost:52000, req:['market2','platinum_unlock'], apply:s=>{ s.globalVal*=1.9; } },
+    { id:'market4', iconType:'value', name:'Void Futures',   desc:'Flat value multiplier +140%.',             type:'once', cost:220000, req:['market3','antimatter_unlock'], apply:s=>{ s.globalVal*=2.4; } },
+    { id:'combo2', iconType:'gem', name:'Combo Bank',       desc:'Combo cashout multiplier +50%.',            type:'once', cost:14000, req:['combo'], apply:s=>{ s.comboMult*=1.5; } },
+    { id:'combo3', iconType:'gem', name:'Combo Reactor',    desc:'Combo cashout multiplier +100%.',           type:'once', cost:70000, req:['combo2','platinum_unlock'], apply:s=>{ s.comboMult*=2; } },
+    { id:'wealth_stack', icon:'📈', name:'Compound Interest', desc:'Each level: global value +18%.',          type:'stack', maxLevel:10, costs:rampCosts(2400, 1.9, 10), req:['cv3'], apply:(s,lvl)=>{ s.globalVal *= 1 + lvl * 0.18; } },
   ],
 };
 
@@ -565,13 +619,17 @@ const game = (() => {
     stats = {
       spd: 38, rSize: 1,
       altAccel: false, shield: false, autopilot: false,
+      autopilotStrength: 0.4, autopilotRange: Infinity,
       magnet: false, magnetR: 0, magnetForce: 0,
       ruby: false, rubyPct: 0, rubyVal: 5,
       sap:  false, sapPct:  0, sapVal:  8,
       gold: false, goldPct: 0, goldVal: 15,
       diamond: false, diamondPct: 0, diamondVal: 40,
+      platinum: false, platinumPct: 0, platinumVal: 90,
+      antimatter: false, antimatterPct: 0, antimatterVal: 220,
       globalVal: 1,
       combo: false, comboCount: 0, denseField: false,
+      comboMult: 1, spawnDensity: 1, handling: 1,
       boosters: false, antenna: false, racingStripes: false,
       plasmaGlow: false, chrome: false, tripleNozzle: false,
       aeroFins: false, tintedWindow: false, warpCore: false,
@@ -657,19 +715,24 @@ const game = (() => {
 
   function initRes() {
     wRes = []; nextRA = 80;
-    const count = stats.denseField ? 18 : 14;
+    const baseCount = stats.denseField ? 18 : 14;
+    const count = Math.max(baseCount, Math.round(baseCount * stats.spawnDensity));
     for (let i = 0; i < count; i++) spawnRes();
   }
 
   function pickType() {
     const total = 100;
     let rem = total;
+    const amPct = stats.antimatter ? stats.antimatterPct : 0;
+    const pPct = stats.platinum ? stats.platinumPct : 0;
     const dPct = stats.diamond ? stats.diamondPct : 0;
     const gPct = stats.gold    ? stats.goldPct    : 0;
     const sPct = stats.sap     ? stats.sapPct     : 0;
     const rPct = stats.ruby    ? stats.rubyPct    : 0;
     const r = Math.random() * total;
     let acc = 0;
+    acc += amPct; if (r < acc) return 'antimatter';
+    acc += pPct; if (r < acc) return 'platinum';
     acc += dPct; if (r < acc) return 'diamond';
     acc += gPct; if (r < acc) return 'gold';
     acc += sPct; if (r < acc) return 'sap';
@@ -713,6 +776,12 @@ const game = (() => {
   }
 
   const H_SPD = 180;
+  function softenFlightSpeed(rawSpeed) {
+    const softCap = 260;
+    if (rawSpeed <= softCap) return rawSpeed;
+    return softCap + Math.sqrt(rawSpeed - softCap) * 26;
+  }
+
   function getResScreenY(r) {
     return rocketScreenY - (r.alt - alt);
   }
@@ -727,11 +796,11 @@ const game = (() => {
       hv = Math.sign(dx) * Math.min(Math.abs(dx) / 60, 1);
     }
 
-    rocketX = Math.max(28, Math.min(W - 28, rocketX + hv * H_SPD * dt));
+    rocketX = Math.max(28, Math.min(W - 28, rocketX + hv * H_SPD * stats.handling * dt));
 
     let accel = 1;
     if (stats.altAccel) accel = 1 + Math.min(alt / 5000, 1.5);
-    spd = stats.spd * accel;
+  spd = softenFlightSpeed(stats.spd * accel);
     alt += spd * dt;
     if (alt > sv.best) { sv.best = alt; persist(); }
 
@@ -742,11 +811,12 @@ const game = (() => {
         const cy = getResScreenY(r);
         if (cy < -100 || cy > H + 50) continue;
         const dx = r.x - rocketX;
-        const d  = Math.sqrt(dx*dx);
+        const dy = cy - rocketScreenY;
+        const d  = Math.hypot(dx, dy);
         if (d < nearDist) { nearDist = d; nearest = r; }
       }
-      if (nearest) {
-        const pull = Math.sign(nearest.x - rocketX) * 0.4;
+      if (nearest && nearDist <= stats.autopilotRange) {
+        const pull = Math.sign(nearest.x - rocketX) * stats.autopilotStrength;
         rocketX = Math.max(28, Math.min(W - 28, rocketX + pull * H_SPD * dt));
       }
     }
@@ -778,6 +848,8 @@ const game = (() => {
       const dy = rocketScreenY - cy;
       if (Math.hypot(dx, dy) < pickR + r.r) {
         const base = (() => {
+          if (r.type === 'antimatter') return stats.antimatterVal;
+          if (r.type === 'platinum') return stats.platinumVal;
           if (r.type === 'diamond') return stats.diamondVal;
           if (r.type === 'gold')    return stats.goldVal;
           if (r.type === 'sap')     return stats.sapVal;
@@ -788,7 +860,10 @@ const game = (() => {
 
         if (stats.combo) {
           comboStreak++;
-          if (comboStreak % 5 === 0) { val *= 2; showToast('🌟 Combo! ×2!'); }
+          if (comboStreak % 5 === 0) {
+            val = Math.round(val * 2 * stats.comboMult);
+            showToast('🌟 Combo! ×' + (2 * stats.comboMult).toFixed(stats.comboMult % 1 === 0 ? 0 : 1) + '!');
+          }
         }
 
         sv.credits += val;
@@ -825,7 +900,7 @@ const game = (() => {
     updateUI();
   }
 
-  const MS = [200, 1000, 5000, 20000, 80000, 300000];
+  const MS = [200, 1000, 5000, 20000, 80000, 300000, 1000000, 5000000, 25000000, 100000000];
   const passedMS = new Set();
   function milestones() {
     MS.forEach(m => {
